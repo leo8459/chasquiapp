@@ -1,0 +1,31 @@
+*.log
+.DS_Store
+Thumbs.db
+
+# Laravel
+.env
+.env.*
+!.env.example
+vendor/
+node_modules/
+public/build/
+public/hot
+public/storage
+storage/*.key
+storage/logs/*.log
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*.php
+bootstrap/cache/*.php
+!.gitignore
+
+# Herramientas locales
+.fleet/
+.idea/
+.nova/
+.vscode/
+.zed/
+.phpactor.json
+.phpunit.result.cache
+.phpunit.cache/
+auth.json

@@ -1,0 +1,33 @@
+name: scan_agbc
+description: "Aplicacion Flutter ScanAGBC para consulta operativa de paquetes por carteros."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  camera: ^0.12.0
+  flutter_secure_storage: ^9.2.2
+  google_mlkit_barcode_scanning: ^0.14.2
+  google_mlkit_text_recognition: ^0.15.1
+  image_picker: ^1.2.1
+  local_auth: ^2.3.0
+  shared_preferences: ^2.5.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/logo.png
+    - assets/images/package_box.png
+    - assets/images/location_logo.png
+    - assets/images/address_not_found_warning.png
