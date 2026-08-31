@@ -1,3 +1,5 @@
+import 'package:scan_agbc/nucleo/utilidades/bolivia_date_time_formatter.dart';
+
 class TrackingEventsResult {
   const TrackingEventsResult({
     required this.code,
@@ -30,6 +32,8 @@ class TrackingEventsResult {
         return 'Contrato';
       case 'eventos_ordi':
         return 'Ordinario';
+      case 'eventos_solicitud':
+        return 'Solicitud';
       default:
         return 'Todos';
     }
@@ -44,6 +48,7 @@ class TrackingEventSummary {
     required this.code,
     required this.eventId,
     required this.event,
+    required this.detail,
     required this.userId,
     required this.user,
     required this.createdAt,
@@ -56,6 +61,7 @@ class TrackingEventSummary {
   final String code;
   final int eventId;
   final String event;
+  final String detail;
   final int userId;
   final String user;
   final String createdAt;
@@ -65,8 +71,13 @@ class TrackingEventSummary {
 
   String get safeEvent => event.trim().isEmpty ? 'Sin evento' : event.trim();
 
+  String get safeDetail => detail.trim();
+
   String get safeUser => user.trim().isEmpty ? 'Sin usuario' : user.trim();
 
-  String get safeCreatedAt =>
-      createdAt.trim().isEmpty ? 'Sin fecha' : createdAt.trim();
+  String get safeCreatedAt {
+    final normalized = createdAt.trim();
+    if (normalized.isEmpty) return 'Sin fecha';
+    return BoliviaDateTimeFormatter.format(DateTime.tryParse(normalized));
+  }
 }

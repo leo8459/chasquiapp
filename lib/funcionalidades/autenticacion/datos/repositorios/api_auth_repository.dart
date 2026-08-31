@@ -23,11 +23,11 @@ class ApiAuthRepository extends AuthRepository {
     required String email,
     required String password,
   }) async {
-    final normalizedEmail = _normalizeEmail(email);
+    final normalizedAlias = _normalizeAlias(email);
     final rawPassword = password;
 
-    if (!_isInstitutionalEmail(normalizedEmail)) {
-      throw StateError('Solo se permiten cuentas @correos.gob.bo.');
+    if (normalizedAlias.isEmpty) {
+      throw StateError('Ingresa tu alias de SIOP.');
     }
     if (rawPassword.trim().isEmpty) {
       throw StateError('Ingresa tu contraseña para continuar.');
@@ -36,7 +36,7 @@ class ApiAuthRepository extends AuthRepository {
     try {
       final payload = await _client.postJsonMap(
         '/mobile/auth/login',
-        body: {'email': normalizedEmail, 'password': rawPassword},
+        body: {'alias': normalizedAlias, 'password': rawPassword},
       );
       final token = payload['token']?.toString().trim() ?? '';
       if (token.isEmpty) {
@@ -64,9 +64,9 @@ class ApiAuthRepository extends AuthRepository {
 
   @override
   Future<AuthenticatedUser> authorizeRememberedAccount(String email) async {
-    final normalizedEmail = _normalizeEmail(email);
-    if (!_isInstitutionalEmail(normalizedEmail)) {
-      throw StateError('Solo se permiten cuentas @correos.gob.bo.');
+    final normalizedAlias = _normalizeAlias(email);
+    if (normalizedAlias.isEmpty) {
+      throw StateError('Ingresa tu alias de SIOP.');
     }
 
     final storedState = await Future.wait<String?>([
@@ -83,9 +83,13 @@ class ApiAuthRepository extends AuthRepository {
     }
 
     final decodedPayload = _decodeStoredPayload(storedUserPayload!);
-    final cachedEmail =
-        decodedPayload['email']?.toString().trim().toLowerCase() ?? '';
-    if (cachedEmail != normalizedEmail) {
+    final cachedAlias =
+        (decodedPayload['alias'] ?? decodedPayload['email'])
+            ?.toString()
+            .trim()
+            .toLowerCase() ??
+        '';
+    if (cachedAlias != normalizedAlias) {
       throw StateError(
         'La cuenta guardada no coincide con la que intentas abrir.',
       );
@@ -164,10 +168,13 @@ class ApiAuthRepository extends AuthRepository {
       );
     }
 
-    final email = _normalizeEmail(payload['email']?.toString() ?? '');
-    if (!_isInstitutionalEmail(email)) {
-      throw StateError('Solo se permiten cuentas @correos.gob.bo.');
+    final alias = _normalizeAlias(
+      (payload['alias'] ?? payload['email'])?.toString() ?? '',
+    );
+    if (alias.isEmpty) {
+      throw StateError('No pudimos reconocer el alias de tu cuenta.');
     }
+    final email = _normalizeAlias(payload['email']?.toString() ?? alias);
 
     final roles = _readRoles(payload['roles']);
     if (roles.isEmpty) {
@@ -185,6 +192,7 @@ class ApiAuthRepository extends AuthRepository {
     return AuthenticatedUser(
       id: userId,
       name: name.isEmpty ? email : name,
+      alias: alias,
       email: email,
       roles: roles,
     );
@@ -208,9 +216,5 @@ class ApiAuthRepository extends AuthRepository {
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
-  String _normalizeEmail(String email) => email.trim().toLowerCase();
-
-  bool _isInstitutionalEmail(String email) {
-    return email.isNotEmpty && email.endsWith('@correos.gob.bo');
-  }
+  String _normalizeAlias(String alias) => alias.trim().toLowerCase();
 }

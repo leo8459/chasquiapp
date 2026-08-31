@@ -14,7 +14,7 @@ import 'package:scan_agbc/funcionalidades/autenticacion/presentacion/paginas/log
 import 'package:scan_agbc/funcionalidades/inicio/presentacion/componentes/app_sidebar.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/assigned_package_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/available_couriers_result.dart';
-import 'package:scan_agbc/funcionalidades/cartero/presentacion/paginas/assigned_packages_page.dart';
+import 'package:scan_agbc/funcionalidades/cartero/presentacion/paginas/self_package_assignment_page.dart';
 import 'package:scan_agbc/funcionalidades/gestion/presentacion/paginas/courier_assignments_lookup_page.dart';
 import 'package:scan_agbc/funcionalidades/gestion/presentacion/paginas/recent_regional_assignments_page.dart';
 import 'package:scan_agbc/funcionalidades/seguimiento/presentacion/componentes/package_tracking_panel.dart';
@@ -93,10 +93,8 @@ class _HomePageState extends State<HomePage> {
   bool _rememberSession = false;
   bool _useBiometric = false;
   bool _biometricAvailable = false;
-  Future<List<AssignedPackageSummary>>? _assignmentsFuture;
   Future<List<AssignedPackageSummary>>? _recentRegionalAssignmentsFuture;
   Future<AvailableCouriersResult>? _couriersFuture;
-  int _assignmentsCount = 0;
 
   bool get _showsModeSelection => widget.area == UserArea.modeSelection;
 
@@ -105,11 +103,6 @@ class _HomePageState extends State<HomePage> {
 
   bool get _canSearchPackages =>
       !_showsModeSelection && _permissions.canSearchPackages;
-
-  bool get _canViewOwnAssignments =>
-      widget.area == UserArea.carteros &&
-      !_permissions.isAdministrator &&
-      _permissions.canViewOwnAssignments;
 
   bool get _canSearchCourierByCi =>
       _showsManagementTools && _permissions.canSearchCourierByCi;
@@ -134,17 +127,6 @@ class _HomePageState extends State<HomePage> {
           title: 'Consulta por código',
           subtitle:
               'Busca el paquete y revisa ciudad, destinatario, teléfono y dirección.',
-        ),
-      );
-    }
-
-    if (_canViewOwnAssignments) {
-      items.add(
-        const AppDrawerInfoItem(
-          icon: Icons.assignment_rounded,
-          title: 'Mis asignaciones',
-          subtitle:
-              'Revisa los paquetes asignados y confirma la entrega con comprobante y firma.',
         ),
       );
     }
@@ -191,10 +173,7 @@ class _HomePageState extends State<HomePage> {
         scanRepository: widget.services.scannerRepository,
       );
     } else {
-      if (_canSearchPackages ||
-          _canSearchCourierByCi ||
-          _canBrowseCouriers ||
-          _canViewOwnAssignments) {
+      if (_canSearchPackages || _canSearchCourierByCi || _canBrowseCouriers) {
         _packageLookupScannerController = ScannerController(
           scanRepository: widget.services.scannerRepository,
           cameraResolutionPreset: ResolutionPreset.high,
@@ -218,7 +197,6 @@ class _HomePageState extends State<HomePage> {
         widget.services.packageTrackingRepository.preloadManagementInventory(),
       );
     }
-    _loadAssignmentsCount();
   }
 
   @override
@@ -228,39 +206,17 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  Future<void> _loadAssignmentsCount() async {
-    if (!_canViewOwnAssignments) return;
-
-    _assignmentsFuture = widget.services.packageTrackingRepository
-        .findAssignmentsForUser(widget.currentUser.id);
-
-    try {
-      final list = await _assignmentsFuture!;
-      if (mounted) {
-        setState(() {
-          _assignmentsCount = list.length;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _assignmentsCount = 0;
-        });
-      }
-    }
-  }
-
   Future<void> _loadSecurityPreferences() async {
     final rememberSessionEnabled = await _sessionSecurityService
         .isRememberSessionEnabled();
     final savedEmail = await _sessionSecurityService.readSessionEmail();
     final biometricEnabledForUser = await _sessionSecurityService
-        .isBiometricEnabledFor(widget.currentUser.email);
+        .isBiometricEnabledFor(widget.currentUser.alias);
     final biometricAvailable = await _biometricAuthService.isAvailable();
 
     if (rememberSessionEnabled &&
         (savedEmail == null || savedEmail.trim().isEmpty)) {
-      await _sessionSecurityService.saveSessionEmail(widget.currentUser.email);
+      await _sessionSecurityService.saveSessionEmail(widget.currentUser.alias);
     }
 
     if (!mounted) return;
@@ -274,7 +230,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _setRememberSession(bool enabled) async {
     if (enabled) {
       await _sessionSecurityService.setRememberSessionEnabled(true);
-      await _sessionSecurityService.saveSessionEmail(widget.currentUser.email);
+      await _sessionSecurityService.saveSessionEmail(widget.currentUser.alias);
       await widget.services.persistRememberedAuthState(widget.currentUser);
       if (!mounted) return;
       setState(() {
@@ -304,7 +260,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     await _sessionSecurityService.setBiometricEnabledFor(
-      widget.currentUser.email,
+      widget.currentUser.alias,
       enabled,
     );
     if (!mounted) return;
@@ -349,19 +305,15 @@ class _HomePageState extends State<HomePage> {
         .findRecentRegionalAssignments();
   }
 
-  Future<void> _openMyAssignments() async {
+  Future<void> _openSelfPackageAssignment() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => AssignedPackagesPage(
-          userId: widget.currentUser.id,
+        builder: (_) => SelfPackageAssignmentPage(
           repository: widget.services.packageTrackingRepository,
-          initialAssignmentsFuture: _assignmentsFuture,
-          allowStatusToggle: true,
           onScanCodeWithCamera: _scanPackageCodeFromCamera,
         ),
       ),
     );
-    _loadAssignmentsCount();
   }
 
   Future<void> _openScanner() async {
@@ -634,15 +586,12 @@ class _HomePageState extends State<HomePage> {
         onOpenRecentAssignments: _canSearchCourierByCi
             ? _openRecentAssignments
             : null,
-        onOpenOwnAssignments: _canViewOwnAssignments
-            ? _openMyAssignments
-            : null,
+        onOpenSelfAssignment: _openSelfPackageAssignment,
         onOpenScanner: _canRegisterPackages ? _openScanner : null,
         scannerActionTitle: 'Clasificaciones',
         scannerActionSubtitle:
             'Ingresa al flujo operativo para registrar la ficha del paquete.',
         onScanCodeWithCamera: _scanPackageCodeFromCamera,
-        assignmentsCount: _canViewOwnAssignments ? _assignmentsCount : 0,
       ),
     );
   }

@@ -400,12 +400,12 @@ class _ScannerPageState extends State<ScannerPage>
         .isRememberSessionEnabled();
     final savedEmail = await _sessionSecurityService.readSessionEmail();
     final biometricEnabled = await _sessionSecurityService
-        .isBiometricEnabledFor(widget.currentUser.email);
+        .isBiometricEnabledFor(widget.currentUser.alias);
     final biometricAvailable = await _biometricAuthService.isAvailable();
 
     if (rememberSessionEnabled &&
         (savedEmail == null || savedEmail.trim().isEmpty)) {
-      await _sessionSecurityService.saveSessionEmail(widget.currentUser.email);
+      await _sessionSecurityService.saveSessionEmail(widget.currentUser.alias);
     }
 
     if (!mounted) return;
@@ -419,7 +419,7 @@ class _ScannerPageState extends State<ScannerPage>
   Future<void> _setRememberSession(bool enabled) async {
     if (enabled) {
       await _sessionSecurityService.setRememberSessionEnabled(true);
-      await _sessionSecurityService.saveSessionEmail(widget.currentUser.email);
+      await _sessionSecurityService.saveSessionEmail(widget.currentUser.alias);
       await widget.services.persistRememberedAuthState(widget.currentUser);
       if (!mounted) return;
       setState(() {
@@ -450,7 +450,7 @@ class _ScannerPageState extends State<ScannerPage>
     }
 
     await _sessionSecurityService.setBiometricEnabledFor(
-      widget.currentUser.email,
+      widget.currentUser.alias,
       enabled,
     );
     if (!mounted) return;

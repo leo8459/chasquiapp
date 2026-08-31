@@ -7,7 +7,7 @@ use App\Http\Controllers\Api\Concerns\ResolvesMobileAuthUser;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Movil\PackageLookupRequest;
 use App\Services\Autenticacion\MobileAuthService;
-use App\Services\Seguimiento\TrackingLookupService;
+use App\Services\Seguimiento\SiopTrackingEventsService;
 use App\Support\MobileApi\MobileApiResponse;
 use Illuminate\Http\JsonResponse;
 
@@ -18,7 +18,7 @@ class MobileTrackingController extends Controller
     public function __invoke(
         PackageLookupRequest $request,
         MobileAuthService $authService,
-        TrackingLookupService $trackingLookupService,
+        SiopTrackingEventsService $trackingLookupService,
     ): JsonResponse {
         $authUser = $this->mobileAuthUser($request);
 
@@ -30,9 +30,8 @@ class MobileTrackingController extends Controller
             );
         }
 
-        $payload = $trackingLookupService->findByCode(
+        $payload = $trackingLookupService->findPackageByCode(
             $request->string('code')->toString(),
-            $authService->canManageOtherCouriers($authUser),
         );
 
         if (($payload['found'] ?? false) !== true) {

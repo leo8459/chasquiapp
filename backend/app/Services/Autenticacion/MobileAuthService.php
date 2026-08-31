@@ -3,12 +3,7 @@
 namespace App\Services\Autenticacion;
 
 use App\Exceptions\MobileApiException;
-use App\Models\User;
-use Illuminate\Database\Query\JoinClause;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 class MobileAuthService
 {
@@ -28,6 +23,12 @@ class MobileAuthService
 
     private const ADMINISTRATOR_ROLE = 'administrador';
 
+    private const CONSULTATION_ROLE = 'consulta';
+
+    private const COURIER_EMS_ROLE = 'cartero_ems';
+
+    private const URBAN_ASSISTANT_ROLE = 'auxiliar_urbano';
+
     private const EMS_MANAGEMENT_ROLE_ID = 73;
 
     private const COURIER_ROLE_PATTERN = '/cartero/i';
@@ -36,22 +37,19 @@ class MobileAuthService
 
     private const MANAGEMENT_ROLE_PATTERN = '/encargado/i';
 
-    private const AUTHORIZED_USER_CACHE_PREFIX = 'mobile_authorized_user:';
-
-    private const AUTHORIZED_USER_CACHE_SECONDS = 60;
-
     public function __construct(
         private readonly MobileApiTokenService $tokenService,
+        private readonly SiopLoginService $siopLoginService,
     ) {}
 
-    public function signIn(string $rawEmail, string $password): array
+    public function signIn(string $rawAlias, string $password): array
     {
-        $email = $this->normalizeEmail($rawEmail);
-        if (! $this->isInstitutionalEmail($email)) {
+        $alias = $this->normalizeAlias($rawAlias);
+        if ($alias === '') {
             throw new MobileApiException(
-                'Solo se permiten cuentas @correos.gob.bo.',
+                'Ingrese su alias de SIOP.',
                 422,
-                'INVALID_EMAIL_DOMAIN',
+                'ALIAS_REQUIRED',
             );
         }
 
@@ -63,35 +61,10 @@ class MobileAuthService
             );
         }
 
-        $record = $this->findUserRecordByEmail($email);
-        $passwordHash = trim((string) ($record->password ?? ''));
-
-        $passwordMatches = false;
-        if ($passwordHash !== '') {
-            try {
-                $passwordMatches = Hash::check($password, $passwordHash);
-            } catch (\RuntimeException) {
-                $passwordMatches = password_verify($password, $passwordHash);
-
-                if ($passwordMatches) {
-                    DB::table('users')
-                        ->where('id', (int) ($record->id ?? 0))
-                        ->update(['password' => Hash::make($password)]);
-                }
-            }
-        }
-
-        if ($passwordHash === '' || ! $passwordMatches) {
-            throw new MobileApiException(
-                'Usuario o contrasena incorrectos.',
-                401,
-                'INVALID_CREDENTIALS',
-            );
-        }
-
-        $user = $this->buildAuthorizedUserPayload($record);
-        $this->cacheAuthorizedUser($user);
-        $token = $this->tokenService->issue($user);
+        $siopPayload = $this->siopLoginService->authenticate($alias, $password);
+        $user = $this->buildAuthorizedUserPayload($siopPayload, $alias);
+        $siopAccessToken = trim((string) ($siopPayload['access_token'] ?? ''));
+        $token = $this->tokenService->issue($user, $siopAccessToken);
 
         return [
             'ok' => true,
@@ -112,15 +85,16 @@ class MobileAuthService
             );
         }
 
-        $userId = (int) $payload['id'];
+        $user = $payload['user'] ?? null;
+        if (! is_array($user) || (int) ($user['id'] ?? 0) <= 0) {
+            throw new MobileApiException(
+                'La sesion expiro. Inicia sesion nuevamente.',
+                401,
+                'SESSION_EXPIRED',
+            );
+        }
 
-        return Cache::remember(
-            $this->authorizedUserCacheKey($userId),
-            now()->addSeconds(self::AUTHORIZED_USER_CACHE_SECONDS),
-            fn (): array => $this->buildAuthorizedUserPayload(
-                $this->findUserRecordById($userId),
-            ),
-        );
+        return $user;
     }
 
     public function logout(?string $token): void
@@ -170,93 +144,32 @@ class MobileAuthService
         );
     }
 
-    private function findUserRecordByEmail(string $email): object
+    private function buildAuthorizedUserPayload(array $payload, string $loginAlias): array
     {
-        $record = DB::table('users as u')
-            ->leftJoin('model_has_roles as mhr', function (JoinClause $join): void {
-                $join->on('mhr.model_id', '=', 'u.id')
-                    ->where('mhr.model_type', User::class);
-            })
-            ->leftJoin('roles as r', 'r.id', '=', 'mhr.role_id')
-            ->select([
-                'u.id',
-                'u.name',
-                'u.email',
-                'u.password',
-                DB::raw("coalesce(string_agg(distinct lower(coalesce(r.name, '')), ','), '') as direct_roles"),
-                DB::raw("coalesce(string_agg(distinct coalesce(r.id, mhr.role_id)::text, ','), '') as direct_role_ids"),
-            ])
-            ->whereRaw('lower(u.email) = ?', [$email])
-            ->whereNull('u.deleted_at')
-            ->groupBy('u.id', 'u.name', 'u.email', 'u.password')
-            ->first();
-
-        if ($record === null) {
-            throw new MobileApiException(
-                'Usuario o contrasena incorrectos.',
-                401,
-                'INVALID_CREDENTIALS',
-            );
-        }
-
-        return $record;
-    }
-
-    private function findUserRecordById(int $userId): object
-    {
-        $record = DB::table('users as u')
-            ->leftJoin('model_has_roles as mhr', function (JoinClause $join): void {
-                $join->on('mhr.model_id', '=', 'u.id')
-                    ->where('mhr.model_type', User::class);
-            })
-            ->leftJoin('roles as r', 'r.id', '=', 'mhr.role_id')
-            ->select([
-                'u.id',
-                'u.name',
-                'u.email',
-                'u.password',
-                DB::raw("coalesce(string_agg(distinct lower(coalesce(r.name, '')), ','), '') as direct_roles"),
-                DB::raw("coalesce(string_agg(distinct coalesce(r.id, mhr.role_id)::text, ','), '') as direct_role_ids"),
-            ])
-            ->where('u.id', $userId)
-            ->whereNull('u.deleted_at')
-            ->groupBy('u.id', 'u.name', 'u.email', 'u.password')
-            ->first();
-
-        if ($record === null) {
-            throw new MobileApiException(
-                'La sesion expiro. Inicia sesion nuevamente.',
-                401,
-                'SESSION_EXPIRED',
-            );
-        }
-
-        return $record;
-    }
-
-    private function buildAuthorizedUserPayload(object $record): array
-    {
-        $userId = (int) ($record->id ?? 0);
+        $record = $this->findUserPayload($payload);
+        $userId = (int) $this->firstValue($record, [
+            'id',
+            'user_id',
+            'usuario_id',
+            'id_usuario',
+        ]);
         if ($userId <= 0) {
             throw new MobileApiException(
-                'No se pudo identificar el usuario autenticado.',
-                422,
-                'INVALID_USER_ID',
+                'SIOP no devolvio el identificador del usuario autenticado.',
+                502,
+                'SIOP_USER_ID_MISSING',
             );
         }
 
-        $email = $this->normalizeEmail((string) ($record->email ?? ''));
-        $roles = $this->resolveRolesForUser(
-            (string) ($record->direct_roles ?? $record->direct_role ?? ''),
-            (string) ($record->direct_role_ids ?? $record->direct_role_id ?? ''),
-        );
+        $email = $this->normalizeAlias((string) $this->firstValue(
+            $record,
+            ['email', 'correo', 'correo_electronico'],
+            $loginAlias,
+        ));
+        $roles = $this->extractRoles($record);
 
         if ($roles === []) {
-            throw new MobileApiException(
-                'Tu cuenta no tiene roles asignados en el backend.',
-                403,
-                'ROLES_REQUIRED',
-            );
+            $roles = [self::CONSULTATION_ROLE];
         }
 
         $allowedRoles = array_values(array_filter(
@@ -274,11 +187,16 @@ class MobileAuthService
         sort($allowedRoles);
         $accessProfile = $this->resolveAccessProfile($allowedRoles);
 
-        $name = trim((string) ($record->name ?? ''));
+        $name = trim((string) $this->firstValue(
+            $record,
+            ['name', 'nombre', 'nombre_completo', 'alias'],
+            $email,
+        ));
 
         return [
             'id' => $userId,
             'name' => $name !== '' ? $name : $email,
+            'alias' => $loginAlias,
             'email' => $email,
             'roles' => $allowedRoles,
             'access_profile' => $accessProfile,
@@ -286,26 +204,94 @@ class MobileAuthService
         ];
     }
 
-    private function cacheAuthorizedUser(array $user): void
+    private function findUserPayload(array $payload): array
     {
-        $userId = (int) ($user['id'] ?? 0);
-        if ($userId <= 0) {
-            return;
+        $candidates = [$payload];
+        foreach (['data', 'user', 'usuario'] as $key) {
+            if (isset($payload[$key]) && is_array($payload[$key])) {
+                $candidates[] = $payload[$key];
+
+                foreach (['user', 'usuario'] as $nestedKey) {
+                    if (isset($payload[$key][$nestedKey]) && is_array($payload[$key][$nestedKey])) {
+                        $candidates[] = $payload[$key][$nestedKey];
+                    }
+                }
+            }
         }
 
-        Cache::put(
-            $this->authorizedUserCacheKey($userId),
-            $user,
-            now()->addSeconds(self::AUTHORIZED_USER_CACHE_SECONDS),
+        foreach ($candidates as $candidate) {
+            if ((int) $this->firstValue($candidate, ['id', 'user_id', 'usuario_id', 'id_usuario']) > 0) {
+                return $candidate;
+            }
+        }
+
+        return $payload;
+    }
+
+    private function extractRoles(array $record): array
+    {
+        $rawRoles = $this->firstValue($record, [
+            'roles',
+            'role',
+            'rol',
+            'perfil',
+            'cargo',
+            'direct_roles',
+            'direct_role',
+        ], []);
+        $rawRoleIds = $this->firstValue($record, [
+            'role_ids',
+            'rol_ids',
+            'id_rol',
+            'role_id',
+            'direct_role_ids',
+            'direct_role_id',
+        ], []);
+
+        return $this->resolveRolesForUser(
+            $this->flattenRoleValues($rawRoles),
+            $this->flattenRoleValues($rawRoleIds),
         );
     }
 
-    private function authorizedUserCacheKey(int $userId): string
+    private function flattenRoleValues(mixed $value): string
     {
-        return self::AUTHORIZED_USER_CACHE_PREFIX.$userId;
+        if (is_array($value)) {
+            $values = [];
+            foreach ($value as $item) {
+                if (is_array($item)) {
+                    $values[] = (string) $this->firstValue($item, [
+                        'name',
+                        'nombre',
+                        'role',
+                        'rol',
+                        'id',
+                        'role_id',
+                        'id_rol',
+                    ]);
+                } else {
+                    $values[] = (string) $item;
+                }
+            }
+
+            return implode(',', $values);
+        }
+
+        return (string) $value;
     }
 
-    private function resolveRolesForUser(string $directRoles, string|int $directRoleIds = ''): array
+    private function firstValue(array $payload, array $keys, mixed $default = null): mixed
+    {
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $payload) && $payload[$key] !== null && $payload[$key] !== '') {
+                return $payload[$key];
+            }
+        }
+
+        return $default;
+    }
+
+    private function resolveRolesForUser(string $directRoles, string $directRoleIds = ''): array
     {
         $roles = [];
 
@@ -330,7 +316,11 @@ class MobileAuthService
     private function normalizeRoles(array $roles): array
     {
         return array_values(array_filter(array_map(
-            fn ($role) => trim(strtolower((string) $role)),
+            fn ($role) => preg_replace(
+                '/[\s-]+/',
+                '_',
+                trim(strtolower((string) $role)),
+            ) ?? '',
             $roles,
         )));
     }
@@ -386,7 +376,8 @@ class MobileAuthService
 
     private function isAllowedRole(string $role): bool
     {
-        return $this->matchesClassificationRole($role)
+        return $role === self::CONSULTATION_ROLE
+            || $this->matchesClassificationRole($role)
             || $this->matchesCourierRole($role)
             || $this->matchesManagementRole($role);
     }
@@ -402,7 +393,8 @@ class MobileAuthService
             return false;
         }
 
-        return preg_match(self::COURIER_ROLE_PATTERN, $role) === 1
+        return in_array($role, [self::COURIER_EMS_ROLE, self::URBAN_ASSISTANT_ROLE], true)
+            || preg_match(self::COURIER_ROLE_PATTERN, $role) === 1
             || preg_match(self::AUXILIAR_ROLE_PATTERN, $role) === 1;
     }
 
@@ -437,13 +429,8 @@ class MobileAuthService
             || in_array('id_rol_'.self::EMS_MANAGEMENT_ROLE_ID, $roles, true);
     }
 
-    private function normalizeEmail(string $email): string
+    private function normalizeAlias(string $alias): string
     {
-        return strtolower(trim($email));
-    }
-
-    private function isInstitutionalEmail(string $email): bool
-    {
-        return $email !== '' && str_ends_with($email, '@correos.gob.bo');
+        return strtolower(trim($alias));
     }
 }

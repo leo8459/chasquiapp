@@ -4,7 +4,9 @@ API Laravel usada por la aplicación móvil ScanAGBC.
 
 ## Punto clave
 
-PostgreSQL no se levanta con Docker desde este proyecto.
+El inicio de sesion no consulta PostgreSQL: el backend autentica contra la API de integracion SIOP y conserva una sesion movil temporal.
+
+PostgreSQL no se levanta con Docker desde este proyecto. Las operaciones postales que aun no tienen una API externa disponible siguen usando la conexion existente.
 
 La API se conecta a un PostgreSQL existente mediante los valores configurados en `.env`.
 
@@ -32,6 +34,15 @@ DB_DATABASE=scan_agbc
 DB_USERNAME=USUARIO_POSTGRES
 DB_PASSWORD=PASSWORD_POSTGRES
 DB_SSLMODE=prefer
+```
+
+Configura la integracion de inicio de sesion SIOP (el token solo debe existir en el servidor, nunca en Flutter):
+
+```env
+SIOP_LOGIN_URL=https://dev.correos.gob.bo:18100/api/integraciones/siop/login
+SIOP_LOGIN_TOKEN=TOKEN_DE_INTEGRACION
+SIOP_LOGIN_TIMEOUT=15
+SIOP_LOGIN_VERIFY_SSL=true
 ```
 
 Para probar sin Docker y sin Redis:

@@ -249,6 +249,49 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
     }
   }
 
+  @override
+  Future<List<AssignedPackageSummary>> findMySiopAssignedPackages() async {
+    try {
+      final payload = await _client.getJsonMap(
+        '/mobile/courier/assigned-packages',
+        authorize: true,
+      );
+      final assignments = payload['assignments'];
+      if (assignments is! List) {
+        return const <AssignedPackageSummary>[];
+      }
+
+      return assignments
+          .map((item) => _mapAssignment(item))
+          .whereType<AssignedPackageSummary>()
+          .toList(growable: false);
+    } on ApiException catch (error) {
+      throw StateError(error.message);
+    }
+  }
+
+  @override
+  Future<void> assignSiopPackagesToMe(List<String> codes) async {
+    final normalizedCodes = codes
+        .map(PackageCodeClassifier.normalize)
+        .where((code) => code.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    if (normalizedCodes.isEmpty) {
+      throw StateError('Selecciona al menos un paquete válido.');
+    }
+
+    try {
+      await _client.postJsonMap(
+        '/mobile/courier/assign-packages',
+        authorize: true,
+        body: {'codes': normalizedCodes},
+      );
+    } on ApiException catch (error) {
+      throw StateError(error.message);
+    }
+  }
+
   Future<List<AssignedPackageSummary>> _findAssignmentsForUserFromApi(
     int userId,
   ) async {
@@ -720,9 +763,10 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
       return null;
     }
 
-    final category = packageCategoryFromName(
-      item['package_type']?.toString().trim() ?? '',
-    );
+    final packageType = item['package_type']?.toString().trim() ?? '';
+    final category = packageType.toLowerCase() == 'solicitud'
+        ? PackageCategory.ems
+        : packageCategoryFromName(packageType);
     if (category == null) {
       return null;
     }
@@ -750,6 +794,10 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
       createdAt: createdAt,
       courierUserId: _toInt(item['courier_user_id']),
       courierName: item['courier_name']?.toString().trim() ?? '',
+      recipientName: item['recipient_name']?.toString().trim() ?? '',
+      recipientPhone: item['recipient_phone']?.toString().trim() ?? '',
+      recipientAddress: item['recipient_address']?.toString().trim() ?? '',
+      packageTypeLabel: packageType,
     );
   }
 
@@ -793,6 +841,7 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
       code: code,
       eventId: _toInt(item['evento_id']),
       event: event,
+      detail: item['detalle']?.toString().trim() ?? '',
       userId: _toInt(item['user_id']),
       user: item['usuario']?.toString().trim() ?? '',
       createdAt: item['created_at']?.toString().trim() ?? '',
@@ -881,7 +930,7 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
       }
 
       if (raw.length >= _cachedJsonIsolateDecodeThreshold) {
-        return compute(_decodeCachedJsonMap, raw);
+        return await compute(_decodeCachedJsonMap, raw);
       }
       return _decodeCachedJsonMap(raw);
     } catch (_) {

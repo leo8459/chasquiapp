@@ -18,6 +18,10 @@ abstract class PackageTrackingRepository {
     bool forceRefresh = false,
   });
 
+  Future<List<AssignedPackageSummary>> findMySiopAssignedPackages();
+
+  Future<void> assignSiopPackagesToMe(List<String> codes);
+
   Future<List<AssignedPackageSummary>> findRecentRegionalAssignments();
 
   Future<AvailableCouriersResult> findAvailableCouriers({

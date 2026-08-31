@@ -11,7 +11,7 @@ class MobileApiTokenService
 
     private const TTL_DAYS = 30;
 
-    public function issue(array $user): string
+    public function issue(array $user, ?string $siopAccessToken = null): string
     {
         $token = Str::random(80);
 
@@ -20,6 +20,8 @@ class MobileApiTokenService
             [
                 'id' => (int) ($user['id'] ?? 0),
                 'email' => (string) ($user['email'] ?? ''),
+                'user' => $user,
+                'siop_access_token' => trim((string) $siopAccessToken),
                 'issued_at' => now()->toIso8601String(),
             ],
             now()->addDays(self::TTL_DAYS),

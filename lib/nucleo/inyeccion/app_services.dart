@@ -81,6 +81,7 @@ class AppServices {
       userPayload: jsonEncode({
         'id': user.id,
         'name': user.name,
+        'alias': user.alias,
         'email': user.email,
         'roles': user.roles.toList(),
       }),

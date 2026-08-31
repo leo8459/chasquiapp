@@ -491,6 +491,17 @@ class _TrackingEventContent extends StatelessWidget {
                         _ServicePill(label: event.safeService),
                       ],
                     ),
+                    if (event.safeDetail.isNotEmpty) ...[
+                      const SizedBox(height: 7),
+                      Text(
+                        event.safeDetail,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.blueDark.withValues(alpha: 0.82),
+                          fontWeight: FontWeight.w700,
+                          height: 1.25,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,

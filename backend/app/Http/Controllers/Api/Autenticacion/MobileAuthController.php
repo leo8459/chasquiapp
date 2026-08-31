@@ -18,7 +18,7 @@ class MobileAuthController extends Controller
     {
         return MobileApiResponse::success(
             $authService->signIn(
-                $request->string('email')->toString(),
+                $request->string('alias')->toString(),
                 $request->string('password')->toString(),
             ),
         );

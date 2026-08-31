@@ -27,18 +27,142 @@ class SiopTrackingEventsService
         $normalizedLimit = max(1, min(50, $limit));
 
         $payload = $this->requestEvents($code, $normalizedTable, $normalizedLimit);
-        $events = $this->normalizeEvents($payload['data'] ?? []);
+        $normalized = $this->normalizePackageEvents(
+            $payload['data'] ?? [],
+            $code,
+            $normalizedLimit,
+        );
+        $events = $normalized['events'];
 
         return [
             'filtro' => [
                 'codigo' => $code,
-                'tabla' => $normalizedTable,
-                'exacto' => (bool) ($payload['filtro']['exacto'] ?? true),
+                'tabla' => $normalized['table'] ?? $normalizedTable,
+                'exacto' => $normalized['exact'],
                 'limit' => $normalizedLimit,
             ],
-            'total' => (int) ($payload['total'] ?? count($events)),
+            'total' => $normalized['total'],
             'data' => $events,
         ];
+    }
+
+    /**
+     * Resolve the internal SIOP package identity required by the courier
+     * assignment endpoint while keeping that implementation detail out of
+     * the mobile client.
+     *
+     * @return array{id: int, code: string, type: string}|null
+     */
+    public function findPackageIdentityByCode(string $rawCode): ?array
+    {
+        $code = $this->normalizeCode($rawCode);
+        if ($code === '') {
+            return null;
+        }
+
+        $package = $this->findRawPackageByCode($code);
+        if ($package === null) {
+            return null;
+        }
+
+        $packageId = (int) ($package['id'] ?? 0);
+        $packageType = $this->assignmentTypeForApiType(
+            strtolower(trim((string) ($package['tipo'] ?? ''))),
+        );
+        if ($packageId <= 0 || $packageType === null) {
+            return null;
+        }
+
+        return [
+            'id' => $packageId,
+            'code' => $code,
+            'type' => $packageType,
+        ];
+    }
+
+    /**
+     * Return the package detail contract consumed by the mobile search view.
+     * All fields come from the external SIOP API; no local database is used.
+     */
+    public function findPackageByCode(string $rawCode): array
+    {
+        $code = $this->normalizeCode($rawCode);
+        if ($code === '') {
+            return ['found' => false, 'code' => ''];
+        }
+
+        $package = $this->findRawPackageByCode($code);
+        if ($package === null) {
+            return ['found' => false, 'code' => $code];
+        }
+
+        $recipient = is_array($package['destinatario'] ?? null)
+            ? $package['destinatario']
+            : [];
+        $state = is_array($package['estado'] ?? null)
+            ? $package['estado']
+            : [];
+        $type = strtolower(trim((string) ($package['tipo'] ?? 'ems')));
+
+        return [
+            'found' => true,
+            'code' => $code,
+            'package_id' => (int) ($package['id'] ?? 0),
+            'package_type' => match ($type) {
+                'certificado' => 'certi',
+                'ordinario' => 'ordi',
+                // The current mobile domain has no separate solicitud category.
+                'solicitud' => 'ems',
+                default => $type,
+            },
+            'highlight_location' => trim((string) (
+                $recipient['direccion']
+                ?? $package['direccion_destinatario']
+                ?? $package['direccion']
+                ?? $package['zona']
+                ?? ''
+            )),
+            'location_note' => '',
+            'city' => trim((string) ($package['destino'] ?? $package['ciudad'] ?? '')),
+            'province' => trim((string) ($package['provincia'] ?? '')),
+            'recipient_name' => trim((string) (
+                $recipient['nombre']
+                ?? $package['nombre_destinatario']
+                ?? (is_string($package['destinatario'] ?? null) ? $package['destinatario'] : '')
+            )),
+            'phone' => trim((string) (
+                $recipient['telefono']
+                ?? $package['telefono_destinatario']
+                ?? $package['telefono']
+                ?? ''
+            )),
+            'weight' => trim((string) ($package['peso'] ?? '')),
+            'detail' => trim((string) ($package['contenido'] ?? $package['descripcion'] ?? strtoupper($type))),
+            'state_name' => trim((string) ($state['nombre'] ?? $state['name'] ?? $package['estado'] ?? '')),
+            'attempt_count' => (int) ($package['intento'] ?? 0),
+            'assigned_courier_name' => trim((string) ($package['asignado_a'] ?? '')),
+        ];
+    }
+
+    private function findRawPackageByCode(string $code): ?array
+    {
+        $payload = $this->requestEvents($code, null, 1);
+        $packages = $payload['data'] ?? [];
+        if (! is_array($packages)) {
+            return null;
+        }
+
+        foreach ($packages as $package) {
+            if (! is_array($package)) {
+                continue;
+            }
+
+            if ($this->normalizeCode((string) ($package['codigo'] ?? '')) === $code) {
+                return $package;
+            }
+        }
+
+        return null;
     }
 
     private function requestEvents(string $code, ?string $table, int $limit): array
@@ -58,10 +182,10 @@ class SiopTrackingEventsService
 
         $query = [
             'codigo' => $code,
-            'limit' => $limit,
+            'per_page' => min(50, $limit),
         ];
         if ($table !== null) {
-            $query['tabla'] = $table;
+            $query['tipo'] = $this->apiTypeForTable($table);
         }
 
         try {
@@ -146,6 +270,7 @@ class SiopTrackingEventsService
                 'codigo' => $code,
                 'evento_id' => (int) ($rawEvent['evento_id'] ?? 0),
                 'evento' => $event,
+                'detalle' => trim((string) ($rawEvent['detalle'] ?? '')),
                 'user_id' => (int) ($rawEvent['user_id'] ?? 0),
                 'usuario' => trim((string) ($rawEvent['usuario'] ?? '')),
                 'created_at' => trim((string) ($rawEvent['created_at'] ?? '')),
@@ -154,6 +279,135 @@ class SiopTrackingEventsService
         }
 
         return $events;
+    }
+
+    private function normalizePackageEvents(mixed $rawPackages, string $code, int $limit): array
+    {
+        if (! is_array($rawPackages)) {
+            return [
+                'events' => [],
+                'total' => 0,
+                'table' => null,
+                'exact' => false,
+            ];
+        }
+
+        // Compatibilidad con la respuesta plana utilizada por la API anterior.
+        $first = $rawPackages[0] ?? null;
+        if (is_array($first) && ! array_key_exists('eventos', $first)) {
+            $events = array_values(array_filter(
+                $this->normalizeEvents($rawPackages),
+                fn (array $event): bool => $event['codigo'] === $code,
+            ));
+
+            return [
+                'events' => array_slice($events, 0, $limit),
+                'total' => count($events),
+                'table' => $events[0]['tabla'] ?? null,
+                'exact' => $events !== [],
+            ];
+        }
+
+        $events = [];
+        $table = null;
+        $exact = false;
+
+        foreach ($rawPackages as $rawPackage) {
+            if (! is_array($rawPackage)) {
+                continue;
+            }
+
+            $packageCode = $this->normalizeCode((string) ($rawPackage['codigo'] ?? ''));
+            if ($packageCode !== $code) {
+                continue;
+            }
+
+            $exact = true;
+            $type = strtolower(trim((string) ($rawPackage['tipo'] ?? '')));
+            $table ??= $this->tableForApiType($type);
+            $service = $this->serviceLabelForApiType($type);
+            $rawEvents = $rawPackage['eventos'] ?? [];
+            if (! is_array($rawEvents)) {
+                continue;
+            }
+
+            foreach ($rawEvents as $rawEvent) {
+                if (! is_array($rawEvent)) {
+                    continue;
+                }
+
+                $eventName = trim((string) ($rawEvent['nombre'] ?? $rawEvent['evento'] ?? ''));
+                if ($eventName === '') {
+                    continue;
+                }
+
+                $user = is_array($rawEvent['usuario'] ?? null) ? $rawEvent['usuario'] : [];
+                $events[] = [
+                    'tabla' => $table,
+                    'servicio' => $service,
+                    'id' => (int) ($rawEvent['id'] ?? 0),
+                    'codigo' => $packageCode,
+                    'evento_id' => (int) ($rawEvent['evento_id'] ?? 0),
+                    'evento' => $eventName,
+                    'detalle' => trim((string) ($rawEvent['detalle'] ?? '')),
+                    'user_id' => (int) ($user['id'] ?? 0),
+                    'usuario' => trim((string) ($user['nombre'] ?? '')),
+                    'created_at' => trim((string) ($rawEvent['fecha'] ?? '')),
+                    'foto' => '',
+                ];
+            }
+        }
+
+        return [
+            'events' => array_slice($events, 0, $limit),
+            'total' => count($events),
+            'table' => $table,
+            'exact' => $exact,
+        ];
+    }
+
+    private function apiTypeForTable(string $table): string
+    {
+        return match ($table) {
+            'eventos_certi' => 'certi',
+            'eventos_contrato' => 'contrato',
+            'eventos_ordi' => 'ordinario',
+            default => 'ems',
+        };
+    }
+
+    private function tableForApiType(string $type): string
+    {
+        return match ($type) {
+            'certi' => 'eventos_certi',
+            'contrato' => 'eventos_contrato',
+            'ordinario' => 'eventos_ordi',
+            'solicitud' => 'eventos_solicitud',
+            default => 'eventos_ems',
+        };
+    }
+
+    private function serviceLabelForApiType(string $type): string
+    {
+        return match ($type) {
+            'certi' => 'Certificado',
+            'contrato' => 'Contrato',
+            'ordinario' => 'Ordinario',
+            'solicitud' => 'Solicitud',
+            default => 'EMS',
+        };
+    }
+
+    private function assignmentTypeForApiType(string $type): ?string
+    {
+        return match ($type) {
+            'ems' => 'EMS',
+            'certi' => 'CERTI',
+            'contrato' => 'CONTRATO',
+            'ordinario', 'ordi' => 'ORDI',
+            'solicitud' => 'SOLICITUD',
+            default => null,
+        };
     }
 
     private function normalizeCode(string $rawCode): string

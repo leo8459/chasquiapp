@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Autenticacion\MobileAuthController;
 use App\Http\Controllers\Api\Cartero\MobileAssignmentDeliveryController;
 use App\Http\Controllers\Api\Cartero\MobileCarteroController;
+use App\Http\Controllers\Api\Cartero\SelfPackageAssignmentController;
 use App\Http\Controllers\Api\Clasificacion\MobileScannerController;
 use App\Http\Controllers\Api\Gestion\MobileCourierController;
 use App\Http\Controllers\Api\Seguimiento\MobileTrackingController;
@@ -42,6 +43,10 @@ Route::prefix('mobile')->as('mobile.')->group(function (): void {
         Route::get('/couriers/{userId}/assignments', [MobileCarteroController::class, 'assignments'])
             ->whereNumber('userId')
             ->name('couriers.assignments');
+        Route::get('/courier/assigned-packages', [SelfPackageAssignmentController::class, 'index'])
+            ->name('courier.assigned-packages');
+        Route::post('/courier/assign-packages', [SelfPackageAssignmentController::class, 'store'])
+            ->name('courier.assign-packages');
         Route::post('/couriers/{userId}/assignments/{assignmentId}/revert-to-warehouse', [MobileCourierController::class, 'revertAssignmentToWarehouse'])
             ->whereNumber('userId')
             ->whereNumber('assignmentId')

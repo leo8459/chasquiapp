@@ -20,13 +20,12 @@ class PackageTrackingPanel extends StatefulWidget {
     this.courierLookupActionSubtitle =
         'Busca por nombre y revisa sus asignaciones activas.',
     this.onOpenRecentAssignments,
-    this.onOpenOwnAssignments,
+    this.onOpenSelfAssignment,
     this.onOpenScanner,
     this.scannerActionTitle = 'Registrar paquete',
     this.scannerActionSubtitle =
         'Abre el scanner para capturar ficha y registrar paquete.',
     this.onScanCodeWithCamera,
-    this.assignmentsCount = 0,
   });
 
   final PackageTrackingRepository repository;
@@ -36,12 +35,11 @@ class PackageTrackingPanel extends StatefulWidget {
   final String courierLookupActionTitle;
   final String courierLookupActionSubtitle;
   final VoidCallback? onOpenRecentAssignments;
-  final VoidCallback? onOpenOwnAssignments;
+  final VoidCallback? onOpenSelfAssignment;
   final VoidCallback? onOpenScanner;
   final String scannerActionTitle;
   final String scannerActionSubtitle;
   final Future<String?> Function()? onScanCodeWithCamera;
-  final int assignmentsCount;
 
   @override
   State<PackageTrackingPanel> createState() => _PackageTrackingPanelState();
@@ -178,12 +176,11 @@ class _PackageTrackingPanelState extends State<PackageTrackingPanel> {
                 courierLookupActionTitle: widget.courierLookupActionTitle,
                 courierLookupActionSubtitle: widget.courierLookupActionSubtitle,
                 onOpenRecentAssignments: widget.onOpenRecentAssignments,
-                onOpenOwnAssignments: widget.onOpenOwnAssignments,
+                onOpenSelfAssignment: widget.onOpenSelfAssignment,
                 onOpenScanner: widget.onOpenScanner,
                 onOpenTrackingEvents: _openTrackingEvents,
                 scannerActionTitle: widget.scannerActionTitle,
                 scannerActionSubtitle: widget.scannerActionSubtitle,
-                assignmentsCount: widget.assignmentsCount,
               ),
             ],
           ),
@@ -210,12 +207,11 @@ class _SearchCard extends StatelessWidget {
     required this.courierLookupActionTitle,
     required this.courierLookupActionSubtitle,
     required this.onOpenRecentAssignments,
-    required this.onOpenOwnAssignments,
+    required this.onOpenSelfAssignment,
     required this.onOpenScanner,
     required this.onOpenTrackingEvents,
     required this.scannerActionTitle,
     required this.scannerActionSubtitle,
-    required this.assignmentsCount,
   });
 
   final Widget? searchCard;
@@ -224,12 +220,11 @@ class _SearchCard extends StatelessWidget {
   final String courierLookupActionTitle;
   final String courierLookupActionSubtitle;
   final VoidCallback? onOpenRecentAssignments;
-  final VoidCallback? onOpenOwnAssignments;
+  final VoidCallback? onOpenSelfAssignment;
   final VoidCallback? onOpenScanner;
   final VoidCallback onOpenTrackingEvents;
   final String scannerActionTitle;
   final String scannerActionSubtitle;
-  final int assignmentsCount;
 
   @override
   Widget build(BuildContext context) {
@@ -255,17 +250,14 @@ class _SearchCard extends StatelessWidget {
       ),
     );
 
-    if (onOpenOwnAssignments != null) {
+    if (onOpenSelfAssignment != null) {
       addSection(
-        _AnimatedNotificationActionCard(
-          count: assignmentsCount,
-          child: _QuickActionCard(
-            icon: Icons.notifications_active_rounded,
-            title: 'Mis asignaciones',
-            subtitle:
-                'Revisa tus paquetes y confirma cada entrega con comprobante y firma.',
-            onTap: onOpenOwnAssignments!,
-          ),
+        _QuickActionCard(
+          icon: Icons.add_task_rounded,
+          title: 'Asignarse paquetes',
+          subtitle:
+              'Escanea o agrega varios códigos, revisa la prelista y asígnalos a tu cuenta.',
+          onTap: onOpenSelfAssignment!,
         ),
       );
     }
@@ -402,88 +394,6 @@ class _QuickActionCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _AnimatedNotificationActionCard extends StatefulWidget {
-  const _AnimatedNotificationActionCard({
-    required this.child,
-    required this.count,
-  });
-
-  final Widget child;
-  final int count;
-
-  @override
-  State<_AnimatedNotificationActionCard> createState() =>
-      _AnimatedNotificationActionCardState();
-}
-
-class _AnimatedNotificationActionCardState
-    extends State<_AnimatedNotificationActionCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-    _scaleAnimation = Tween<double>(
-      begin: 0.95,
-      end: 1.05,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        widget.child,
-        if (widget.count > 0)
-          Positioned(
-            top: -8,
-            right: -8,
-            child: ScaleTransition(
-              scale: _scaleAnimation,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  color: AppTheme.errorRed,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x33000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  '${widget.count}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 13,
-                    height: 1.0,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

@@ -6,7 +6,10 @@ class UserRolePermissions {
   factory UserRolePermissions.fromRoles(Set<String> rawRoles) {
     return UserRolePermissions._(
       rawRoles
-          .map((role) => role.trim().toLowerCase())
+          .map(
+            (role) =>
+                role.trim().toLowerCase().replaceAll(RegExp(r'[\s-]+'), '_'),
+          )
           .where((role) => role.isNotEmpty)
           .toSet(),
     );
@@ -19,6 +22,9 @@ class UserRolePermissions {
   static const String _auxiliarTratamientoRole = 'auxiliar_tratamiento';
   static const String _encargadoEmsRole = 'encargado_ems';
   static const String _administratorRole = 'administrador';
+  static const String _consultationRole = 'consulta';
+  static const String _courierEmsRole = 'cartero_ems';
+  static const String _urbanAssistantRole = 'auxiliar_urbano';
 
   final Set<String> roles;
 
@@ -84,6 +90,7 @@ class UserRolePermissions {
   bool _isRecognizedRole(String role) {
     return _matchesClassificationRole(role) ||
         _matchesCourierRole(role) ||
+        role == _consultationRole ||
         role == _administratorRole ||
         _encargadoRolePattern.hasMatch(role) ||
         _matchesSelfAssignableManagementMarker(role);
@@ -99,6 +106,8 @@ class UserRolePermissions {
     }
 
     return _courierRolePattern.hasMatch(role) ||
+        role == _courierEmsRole ||
+        role == _urbanAssistantRole ||
         _auxiliarRolePattern.hasMatch(role);
   }
 

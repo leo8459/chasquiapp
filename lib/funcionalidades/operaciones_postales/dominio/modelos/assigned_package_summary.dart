@@ -11,6 +11,10 @@ class AssignedPackageSummary {
     required this.createdAt,
     this.courierUserId = 0,
     this.courierName = '',
+    this.recipientName = '',
+    this.recipientPhone = '',
+    this.recipientAddress = '',
+    this.packageTypeLabel = '',
   });
 
   final int assignmentId;
@@ -20,6 +24,10 @@ class AssignedPackageSummary {
   final DateTime? createdAt;
   final int courierUserId;
   final String courierName;
+  final String recipientName;
+  final String recipientPhone;
+  final String recipientAddress;
+  final String packageTypeLabel;
 
   AssignedPackageSummary copyWith({
     int? assignmentId,
@@ -29,6 +37,10 @@ class AssignedPackageSummary {
     DateTime? createdAt,
     int? courierUserId,
     String? courierName,
+    String? recipientName,
+    String? recipientPhone,
+    String? recipientAddress,
+    String? packageTypeLabel,
   }) {
     return AssignedPackageSummary(
       assignmentId: assignmentId ?? this.assignmentId,
@@ -38,7 +50,16 @@ class AssignedPackageSummary {
       createdAt: createdAt ?? this.createdAt,
       courierUserId: courierUserId ?? this.courierUserId,
       courierName: courierName ?? this.courierName,
+      recipientName: recipientName ?? this.recipientName,
+      recipientPhone: recipientPhone ?? this.recipientPhone,
+      recipientAddress: recipientAddress ?? this.recipientAddress,
+      packageTypeLabel: packageTypeLabel ?? this.packageTypeLabel,
     );
+  }
+
+  String get displayPackageType {
+    final normalized = packageTypeLabel.trim();
+    return normalized.isEmpty ? category.label : normalized.toUpperCase();
   }
 
   String get safeCourierName {

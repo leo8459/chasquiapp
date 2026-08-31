@@ -36,10 +36,26 @@ return [
     ],
 
     'siop_tracking_events' => [
-        'url' => env('SIOP_TRACKING_EVENTS_URL', 'https://trackingbo.correos.gob.bo:8100/api/siop/eventos'),
+        'url' => env('SIOP_TRACKING_EVENTS_URL', 'https://dev.correos.gob.bo:18100/api/paquetes-eventos'),
         'token' => env('SIOP_TRACKING_EVENTS_TOKEN'),
         'timeout' => (int) env('SIOP_TRACKING_EVENTS_TIMEOUT', 12),
         'verify_ssl' => (bool) env('SIOP_TRACKING_EVENTS_VERIFY_SSL', true),
+    ],
+
+    'siop_login' => [
+        'url' => env('SIOP_LOGIN_URL', 'https://dev.correos.gob.bo:18100/api/integraciones/siop/login'),
+        'token' => env('SIOP_LOGIN_TOKEN'),
+        'timeout' => (int) env('SIOP_LOGIN_TIMEOUT', 15),
+        'verify_ssl' => (bool) env('SIOP_LOGIN_VERIFY_SSL', true),
+    ],
+
+    'siop_courier_packages' => [
+        'assigned_url' => env('SIOP_COURIER_ASSIGNED_URL', 'https://dev.correos.gob.bo:18100/api/chasqui/paquetes-asignados'),
+        'assigned_token' => env('SIOP_COURIER_ASSIGNED_TOKEN'),
+        'assign_url' => env('SIOP_COURIER_ASSIGN_URL', 'https://dev.correos.gob.bo:18100/api/chasqui/paquetes/asignar'),
+        'assign_token' => env('SIOP_COURIER_ASSIGN_TOKEN'),
+        'timeout' => (int) env('SIOP_COURIER_PACKAGES_TIMEOUT', 20),
+        'verify_ssl' => (bool) env('SIOP_COURIER_PACKAGES_VERIFY_SSL', true),
     ],
 
 ];

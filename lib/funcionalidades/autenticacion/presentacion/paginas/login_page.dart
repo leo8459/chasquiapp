@@ -100,10 +100,10 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     final preferredEmail = (() {
-      final remembered = savedUser?.trim().toLowerCase() ?? '';
+      final remembered = _normalizeSiopAlias(savedUser ?? '');
       if (remembered.isNotEmpty) return remembered;
       if (knownAccounts.isEmpty) return null;
-      final latestKnown = knownAccounts.first.trim().toLowerCase();
+      final latestKnown = _normalizeSiopAlias(knownAccounts.first);
       return latestKnown.isEmpty ? null : latestKnown;
     })();
 
@@ -125,7 +125,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _handleUserInputChanged() {
-    final currentEmail = _userController.text.trim().toLowerCase();
+    final currentEmail = _normalizeSiopAlias(_userController.text);
 
     if (currentEmail.isEmpty) {
       _savedUser = null;
@@ -139,7 +139,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _loadBiometricEligibilityFor(String email) async {
-    final normalizedEmail = email.trim().toLowerCase();
+    final normalizedEmail = _normalizeSiopAlias(email);
     if (normalizedEmail.isEmpty) {
       _biometricEnabledSetting.value = false;
       return;
@@ -209,7 +209,7 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
     if (_submitting.value) return;
 
-    final email = _userController.text.trim().toLowerCase();
+    final alias = _normalizeSiopAlias(_userController.text);
     final password = _passwordController.text;
 
     _submitting.value = true;
@@ -217,7 +217,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final authenticatedUser = await _authRepository.signIn(
-        email: email,
+        email: alias,
         password: password,
       );
       final rememberSessionEnabled = await _sessionSecurityService
@@ -225,13 +225,13 @@ class _LoginPageState extends State<LoginPage> {
 
       if (rememberSessionEnabled) {
         await Future.wait([
-          _sessionSecurityService.saveSessionEmail(authenticatedUser.email),
+          _sessionSecurityService.saveSessionEmail(authenticatedUser.alias),
           widget.services.persistRememberedAuthState(authenticatedUser),
         ]);
-        _savedUser = authenticatedUser.email;
+        _savedUser = authenticatedUser.alias;
       } else {
         await _sessionSecurityService.clearSession();
-        await _sessionSecurityService.saveKnownAccount(authenticatedUser.email);
+        await _sessionSecurityService.saveKnownAccount(authenticatedUser.alias);
       }
       await _sessionSecurityService.saveLastAuthAt(DateTime.now());
 
@@ -284,28 +284,23 @@ class _LoginPageState extends State<LoginPage> {
     };
   }
 
-  static const String _institutionalDomain = '@correos.gob.bo';
-  static final RegExp _institutionalUserPattern = RegExp(
-    r'^[a-z0-9]+(?:[._+-][a-z0-9]+)*$',
-  );
-
   String? _validateUser(String? value) {
-    final text = value?.trim().toLowerCase() ?? '';
-    if (text.isEmpty) return 'Ingrese su usuario';
-
-    if (!text.endsWith(_institutionalDomain)) {
-      return 'Use su correo institucional @correos.gob.bo';
-    }
-
-    final localPart = text.substring(
-      0,
-      text.length - _institutionalDomain.length,
-    );
-    if (!_institutionalUserPattern.hasMatch(localPart)) {
-      return 'Ingrese un correo institucional válido.';
-    }
+    final text = _normalizeSiopAlias(value ?? '');
+    if (text.isEmpty) return 'Ingrese su alias de SIOP';
 
     return null;
+  }
+
+  String _normalizeSiopAlias(String value) {
+    const institutionalDomain = '@correos.gob.bo';
+    final normalized = value.trim().toLowerCase();
+    if (normalized.endsWith(institutionalDomain)) {
+      return normalized.substring(
+        0,
+        normalized.length - institutionalDomain.length,
+      );
+    }
+    return normalized;
   }
 
   String? _validatePassword(String? value) {
@@ -358,19 +353,19 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         const _Header(),
                         const SizedBox(height: 28),
-                        const _FieldLabel(text: 'Correo Institucional'),
+                        const _FieldLabel(text: 'Alias SIOP'),
                         const SizedBox(height: 8),
                         TextFormField(
                           controller: _userController,
                           onChanged: (_) => _handleUserInputChanged(),
-                          keyboardType: TextInputType.emailAddress,
+                          keyboardType: TextInputType.text,
                           textInputAction: TextInputAction.next,
                           cursorColor: AppTheme.yellow,
                           style: Theme.of(context).textTheme.bodyLarge
                               ?.copyWith(color: AppTheme.blue, fontSize: 15),
                           decoration: const InputDecoration(
-                            hintText: 'usuario@correos.gob.bo',
-                            prefixIcon: Icon(Icons.alternate_email_rounded),
+                            hintText: 'Ingrese su alias',
+                            prefixIcon: Icon(Icons.person_outline_rounded),
                           ),
                           validator: _validateUser,
                         ),
