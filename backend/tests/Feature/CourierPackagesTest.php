@@ -233,6 +233,53 @@ class CourierPackagesTest extends TestCase
             ->assertJsonPath('codes.0', 'EE123456789BO');
     }
 
+    public function test_assignment_waits_for_eventual_state_after_a_post_commit_error(): void
+    {
+        $assignmentAttempted = false;
+        $assignedLookupCount = 0;
+
+        Http::fake(function (Request $request) use (&$assignmentAttempted, &$assignedLookupCount) {
+            if (str_starts_with($request->url(), 'https://siop.example.test/events')) {
+                return Http::response(['data' => [[
+                    'id' => 500,
+                    'tipo' => 'ems',
+                    'codigo' => 'EE123456789BO',
+                    'eventos' => [],
+                ]]]);
+            }
+
+            if ($request->url() === 'https://siop.example.test/assign') {
+                $assignmentAttempted = true;
+
+                return Http::response(['message' => 'Error posterior al guardado.'], 422);
+            }
+
+            if (str_starts_with($request->url(), 'https://siop.example.test/assigned')) {
+                $assignedLookupCount++;
+                $visible = $assignmentAttempted && $assignedLookupCount >= 3;
+
+                return Http::response(['data' => $visible ? [[
+                    'id' => 500,
+                    'codigo' => 'EE123456789BO',
+                    'tipo' => 'ems',
+                    'estado' => 'CARTERO',
+                ]] : []]);
+            }
+
+            return Http::response([], 404);
+        });
+
+        $this->withToken($this->issueMobileToken())
+            ->postJson('/api/mobile/courier/assign-packages', [
+                'codes' => ['EE123456789BO'],
+            ])
+            ->assertOk()
+            ->assertJsonPath('assigned_count', 1)
+            ->assertJsonPath('codes.0', 'EE123456789BO');
+
+        $this->assertGreaterThanOrEqual(3, $assignedLookupCount);
+    }
+
     public function test_already_assigned_package_is_not_posted_again(): void
     {
         Http::fake([

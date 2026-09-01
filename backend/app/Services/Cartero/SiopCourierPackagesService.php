@@ -129,7 +129,19 @@ class SiopCourierPackagesService
             // after its database transaction has already committed. Confirm the
             // resulting state before telling the courier that the assignment
             // failed and risking a duplicate retry.
-            if ($error->status() >= 500 && $this->allCodesAreNowAssigned($mobileToken, $pendingCodes)) {
+            $verifiedAsAssigned = $error->status() >= 409
+                && $error->status() !== 401
+                && $error->status() !== 403
+                && $this->allCodesAreNowAssignedEventually($mobileToken, $pendingCodes);
+
+            Log::warning('La API de asignacion SIOP devolvio un error.', [
+                'status' => $error->status(),
+                'error_code' => $error->errorCode(),
+                'verified_as_assigned' => $verifiedAsAssigned,
+                'package_count' => count($pendingCodes),
+            ]);
+
+            if ($verifiedAsAssigned) {
                 return [
                     'assigned_count' => count($pendingCodes),
                     'codes' => $codes,
@@ -468,5 +480,20 @@ class SiopCourierPackagesService
         }
 
         return true;
+    }
+
+    private function allCodesAreNowAssignedEventually(?string $mobileToken, array $codes): bool
+    {
+        foreach ([0, 250000, 750000, 1500000] as $delayMicroseconds) {
+            if ($delayMicroseconds > 0) {
+                usleep($delayMicroseconds);
+            }
+
+            if ($this->allCodesAreNowAssigned($mobileToken, $codes)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

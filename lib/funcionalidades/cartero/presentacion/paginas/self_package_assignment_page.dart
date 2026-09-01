@@ -138,27 +138,38 @@ class _SelfPackageAssignmentPageState extends State<SelfPackageAssignmentPage> {
 
     setState(() => _assigning = true);
     try {
-      await widget.repository.assignSiopPackagesToMe(
-        _selectedCodes.toList(growable: false),
-      );
+      try {
+        await widget.repository.assignSiopPackagesToMe(
+          _selectedCodes.toList(growable: false),
+        );
+      } catch (error) {
+        if (!mounted) return;
+        showAppFeedbackBanner(
+          context,
+          UserFriendlyErrorMapper.message(
+            error,
+            fallback: 'No pudimos asignar los paquetes seleccionados.',
+          ),
+          tone: AppFeedbackTone.error,
+        );
+        return;
+      }
+
       if (!mounted) return;
       setState(_selectedCodes.clear);
-      await _reload();
+      var refreshed = true;
+      try {
+        await _reload();
+      } catch (_) {
+        refreshed = false;
+      }
       if (!mounted) return;
       showAppFeedbackBanner(
         context,
-        'Paquetes asignados correctamente.',
-        tone: AppFeedbackTone.success,
-      );
-    } catch (error) {
-      if (!mounted) return;
-      showAppFeedbackBanner(
-        context,
-        UserFriendlyErrorMapper.message(
-          error,
-          fallback: 'No pudimos asignar los paquetes seleccionados.',
-        ),
-        tone: AppFeedbackTone.error,
+        refreshed
+            ? 'Paquetes asignados correctamente.'
+            : 'Paquetes asignados. Desliza hacia abajo para actualizar la lista.',
+        tone: refreshed ? AppFeedbackTone.success : AppFeedbackTone.info,
       );
     } finally {
       if (mounted) setState(() => _assigning = false);
