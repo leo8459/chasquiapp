@@ -151,10 +151,14 @@ class UserFriendlyErrorMapper {
       'la asignacion ',
       'la asignación ',
       'no encontramos ',
+      'no pudimos ',
       'tu cuenta ',
       'tu usuario ',
       'cada nombre ',
       'el nombre ',
+      'el campo ',
+      'la foto ',
+      'la fecha ',
     ];
 
     for (final prefix in safePrefixes) {

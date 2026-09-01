@@ -22,6 +22,16 @@ abstract class PackageTrackingRepository {
 
   Future<void> assignSiopPackagesToMe(List<String> codes);
 
+  Future<void> deliverMySiopPackage({
+    required String code,
+    required String description,
+    required String receivedBy,
+    required DateTime deliveredAt,
+    required Uint8List deliveryPhotoBytes,
+    required String deliveryPhotoFileName,
+    required String deliveryPhotoContentType,
+  });
+
   Future<List<AssignedPackageSummary>> findRecentRegionalAssignments();
 
   Future<AvailableCouriersResult> findAvailableCouriers({

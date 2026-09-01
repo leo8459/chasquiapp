@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Services\Autenticacion\MobileApiTokenService;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -19,6 +20,8 @@ class CourierPackagesTest extends TestCase
             'services.siop_courier_packages.assigned_token' => 'assigned-integration-token',
             'services.siop_courier_packages.assign_url' => 'https://siop.example.test/assign',
             'services.siop_courier_packages.assign_token' => 'assign-integration-token',
+            'services.siop_courier_packages.deliver_url' => 'https://siop.example.test/deliver',
+            'services.siop_courier_packages.deliver_token' => 'deliver-integration-token',
             'services.siop_courier_packages.verify_ssl' => true,
             'services.siop_tracking_events.url' => 'https://siop.example.test/events',
             'services.siop_tracking_events.token' => 'events-integration-token',
@@ -141,6 +144,52 @@ class CourierPackagesTest extends TestCase
             ->assertJsonPath('error_code', 'SIOP_PACKAGES_NOT_FOUND');
 
         Http::assertNotSent(fn (Request $request): bool => $request->url() === 'https://siop.example.test/assign');
+    }
+
+    public function test_courier_can_deliver_an_assigned_package_with_dual_authentication(): void
+    {
+        Http::fake([
+            'https://siop.example.test/events*' => Http::response(['data' => [[
+                'id' => 500,
+                'tipo' => 'ems',
+                'codigo' => 'EE123456789BO',
+                'eventos' => [],
+            ]]]),
+            'https://siop.example.test/deliver' => Http::response([
+                'message' => 'Paquete entregado.',
+                'entregados' => 1,
+            ]),
+        ]);
+
+        $this->withToken($this->issueMobileToken())
+            ->post('/api/mobile/courier/deliver-package', [
+                'code' => 'EE123456789BO',
+                'description' => 'Entregado en domicilio.',
+                'received_by' => 'Juan Perez',
+                'delivered_at' => '2026-09-01T12:30:00-04:00',
+                'delivery_photo' => UploadedFile::fake()->image('entrega.jpg'),
+            ])
+            ->assertOk()
+            ->assertJsonPath('delivered_count', 1)
+            ->assertJsonPath('code', 'EE123456789BO');
+
+        Http::assertSent(function (Request $request): bool {
+            $parts = collect($request->data());
+            $hasPart = fn (string $name, string $value): bool => $parts->contains(
+                fn (array $part): bool => ($part['name'] ?? null) === $name
+                    && (string) ($part['contents'] ?? '') === $value,
+            );
+
+            return $request->url() === 'https://siop.example.test/deliver'
+                && $request->hasHeader('Authorization', 'Bearer siop-user-token')
+                && $request->hasHeader('X-API-Token', 'deliver-integration-token')
+                && $hasPart('id', '500')
+                && $hasPart('tipo_paquete', 'EMS')
+                && $hasPart('descripcion', 'Entregado en domicilio.')
+                && $hasPart('recibido_por', 'Juan Perez')
+                && $hasPart('fecha_entrega', '2026-09-01T12:30')
+                && $request->hasFile('foto');
+        });
     }
 
     public function test_assignment_is_successful_when_siop_fails_after_committing_it(): void

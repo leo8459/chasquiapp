@@ -292,6 +292,55 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
     }
   }
 
+  @override
+  Future<void> deliverMySiopPackage({
+    required String code,
+    required String description,
+    required String receivedBy,
+    required DateTime deliveredAt,
+    required Uint8List deliveryPhotoBytes,
+    required String deliveryPhotoFileName,
+    required String deliveryPhotoContentType,
+  }) async {
+    final validation = PackageCodeClassifier.validateForSearch(code);
+    if (!validation.isValid) {
+      throw StateError(
+        validation.errorMessage ?? 'Selecciona un paquete valido.',
+      );
+    }
+    final receivedByValidation = DeliveryRecipientNameValidator.validate(
+      receivedBy,
+    );
+    if (!receivedByValidation.isValid) {
+      throw StateError(
+        receivedByValidation.errorMessage ??
+            'Escribe quien recibio el paquete.',
+      );
+    }
+    if (deliveryPhotoBytes.isEmpty) {
+      throw StateError('Debes tomar una foto para confirmar la entrega.');
+    }
+
+    try {
+      await _client.postMultipartMap(
+        '/mobile/courier/deliver-package',
+        authorize: true,
+        fields: {
+          'code': validation.normalizedCode,
+          'description': description.trim(),
+          'received_by': receivedByValidation.normalizedValue,
+          'delivered_at': deliveredAt.toIso8601String(),
+        },
+        fileField: 'delivery_photo',
+        fileBytes: deliveryPhotoBytes,
+        fileName: deliveryPhotoFileName,
+        contentType: deliveryPhotoContentType,
+      );
+    } on ApiException catch (error) {
+      throw StateError(error.message);
+    }
+  }
+
   Future<List<AssignedPackageSummary>> _findAssignmentsForUserFromApi(
     int userId,
   ) async {

@@ -7,7 +7,10 @@ use App\Services\Autenticacion\MobileApiTokenService;
 use App\Services\Seguimiento\SiopTrackingEventsService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Carbon;
 
 class SiopCourierPackagesService
 {
@@ -142,6 +145,107 @@ class SiopCourierPackagesService
             'codes' => $codes,
             'message' => trim((string) ($payload['message'] ?? 'Paquetes asignados correctamente.')),
         ];
+    }
+
+    public function deliverPackage(
+        ?string $mobileToken,
+        string $rawCode,
+        string $description,
+        string $receivedBy,
+        Carbon $deliveredAt,
+        UploadedFile $deliveryPhoto,
+    ): array {
+        $code = $this->normalizeCode($rawCode);
+        if ($code === '') {
+            throw new MobileApiException(
+                'Debes seleccionar un paquete valido.',
+                422,
+                'PACKAGE_CODE_REQUIRED',
+            );
+        }
+
+        $package = $this->trackingEventsService->findPackageIdentityByCode($code);
+        if ($package === null) {
+            throw new MobileApiException(
+                "No encontramos el paquete {$code} en SIOP.",
+                422,
+                'SIOP_PACKAGE_NOT_FOUND',
+            );
+        }
+
+        $payload = $this->deliveryRequest(
+            url: $this->requiredConfig('deliver_url'),
+            integrationToken: $this->requiredConfig('deliver_token'),
+            siopToken: $this->siopAccessToken($mobileToken),
+            fields: [
+                'id' => $package['id'],
+                'tipo_paquete' => $package['type'],
+                'descripcion' => trim($description),
+                'recibido_por' => trim($receivedBy),
+                // BoliPost usa el valor de un input HTML datetime-local.
+                'fecha_entrega' => $deliveredAt->format('Y-m-d\TH:i'),
+            ],
+            deliveryPhoto: $deliveryPhoto,
+        );
+
+        return [
+            'delivered_count' => (int) ($payload['entregados'] ?? $payload['delivered_count'] ?? 1),
+            'code' => $code,
+            'message' => trim((string) ($payload['message'] ?? 'Paquete entregado correctamente.')),
+        ];
+    }
+
+    private function deliveryRequest(
+        string $url,
+        string $integrationToken,
+        string $siopToken,
+        array $fields,
+        UploadedFile $deliveryPhoto,
+    ): array {
+        try {
+            $response = Http::acceptJson()
+                ->withToken($siopToken)
+                ->withHeaders(['X-API-Token' => $integrationToken])
+                ->connectTimeout(5)
+                ->timeout(max(1, (int) config('services.siop_courier_packages.deliver_timeout', 60)))
+                ->withOptions([
+                    'verify' => (bool) config('services.siop_courier_packages.verify_ssl', true),
+                ])
+                ->attach(
+                    'foto',
+                    $deliveryPhoto->get(),
+                    $deliveryPhoto->getClientOriginalName(),
+                    ['Content-Type' => $deliveryPhoto->getMimeType() ?: 'image/jpeg'],
+                )
+                ->post($url, $fields);
+        } catch (ConnectionException) {
+            Log::warning('No se pudo conectar con la API de entrega SIOP.');
+            throw new MobileApiException(
+                'No pudimos comunicarnos con el servicio de entrega SIOP.',
+                503,
+                'SIOP_DELIVERY_UNAVAILABLE',
+            );
+        }
+
+        if (! $response->successful()) {
+            Log::warning('La API de entrega SIOP rechazo la solicitud.', [
+                'status' => $response->status(),
+                'message' => trim((string) $response->json('message')),
+                'error_fields' => array_keys((array) $response->json('errors', [])),
+            ]);
+            $this->throwForFailedResponse($response);
+        }
+
+        $payload = $response->json();
+        if (! is_array($payload)) {
+            throw new MobileApiException(
+                'SIOP devolvio una respuesta de entrega no valida.',
+                502,
+                'SIOP_DELIVERY_INVALID_RESPONSE',
+            );
+        }
+
+        return $payload;
     }
 
     private function request(

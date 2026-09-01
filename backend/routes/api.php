@@ -47,6 +47,8 @@ Route::prefix('mobile')->as('mobile.')->group(function (): void {
             ->name('courier.assigned-packages');
         Route::post('/courier/assign-packages', [SelfPackageAssignmentController::class, 'store'])
             ->name('courier.assign-packages');
+        Route::post('/courier/deliver-package', [SelfPackageAssignmentController::class, 'deliver'])
+            ->name('courier.deliver-package');
         Route::post('/couriers/{userId}/assignments/{assignmentId}/revert-to-warehouse', [MobileCourierController::class, 'revertAssignmentToWarehouse'])
             ->whereNumber('userId')
             ->whereNumber('assignmentId')

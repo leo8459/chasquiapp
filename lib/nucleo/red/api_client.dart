@@ -169,19 +169,21 @@ class ApiClient {
         if (multipart != null) {
           final boundary =
               '----ScanAgbcBoundary${DateTime.now().microsecondsSinceEpoch}';
+          final multipartBody = _buildMultipartBody(boundary, multipart);
           request.headers.contentType = ContentType(
             'multipart',
             'form-data',
             parameters: {'boundary': boundary},
           );
-          request.add(_buildMultipartBody(boundary, multipart));
+          request.contentLength = multipartBody.length;
+          request.add(multipartBody);
         } else if (jsonBody != null) {
           request.headers.contentType = ContentType.json;
           request.write(jsonEncode(jsonBody));
         }
 
         final response = await request.close().timeout(
-          const Duration(seconds: 20),
+          Duration(seconds: multipart == null ? 20 : 60),
         );
         final responseBody = await response.transform(utf8.decoder).join();
         final decodedBody = await _tryDecodeJson(responseBody);

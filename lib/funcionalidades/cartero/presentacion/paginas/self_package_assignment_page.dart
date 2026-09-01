@@ -10,6 +10,7 @@ import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/a
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/repositorios/package_tracking_repository.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/utilidades/package_code_classifier.dart';
 import 'package:scan_agbc/funcionalidades/seguimiento/presentacion/componentes/package_tracking_search_card.dart';
+import 'package:scan_agbc/funcionalidades/cartero/presentacion/paginas/siop_package_delivery_page.dart';
 
 class SelfPackageAssignmentPage extends StatefulWidget {
   const SelfPackageAssignmentPage({
@@ -36,8 +37,9 @@ class _SelfPackageAssignmentPageState extends State<SelfPackageAssignmentPage> {
       const <AssignedPackageSummary>[];
   bool _scanning = false;
   bool _assigning = false;
+  int? _deliveringAssignmentId;
 
-  bool get _busy => _scanning || _assigning;
+  bool get _busy => _scanning || _assigning || _deliveringAssignmentId != null;
 
   @override
   void dispose() {
@@ -163,6 +165,32 @@ class _SelfPackageAssignmentPageState extends State<SelfPackageAssignmentPage> {
     }
   }
 
+  Future<void> _deliverPackage(AssignedPackageSummary assignment) async {
+    if (_deliveringAssignmentId != null) return;
+    setState(() => _deliveringAssignmentId = assignment.assignmentId);
+    try {
+      final delivered = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => SiopPackageDeliveryPage(
+            assignment: assignment,
+            repository: widget.repository,
+          ),
+        ),
+      );
+      if (delivered != true || !mounted) return;
+      if (!mounted) return;
+      await _reload();
+      if (!mounted) return;
+      showAppFeedbackBanner(
+        context,
+        'Paquete ${assignment.code} entregado correctamente.',
+        tone: AppFeedbackTone.success,
+      );
+    } finally {
+      if (mounted) setState(() => _deliveringAssignmentId = null);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedCodes = _selectedCodes.toList()..sort();
@@ -223,7 +251,11 @@ class _SelfPackageAssignmentPageState extends State<SelfPackageAssignmentPage> {
                   );
                 }
                 final assignments = snapshot.data ?? const [];
-                return _AssignedPackagesSection(assignments: assignments);
+                return _AssignedPackagesSection(
+                  assignments: assignments,
+                  deliveringAssignmentId: _deliveringAssignmentId,
+                  onDeliver: _deliverPackage,
+                );
               },
             ),
           ],
@@ -317,9 +349,15 @@ class _SelectionPreviewCard extends StatelessWidget {
 }
 
 class _AssignedPackagesSection extends StatelessWidget {
-  const _AssignedPackagesSection({required this.assignments});
+  const _AssignedPackagesSection({
+    required this.assignments,
+    required this.deliveringAssignmentId,
+    required this.onDeliver,
+  });
 
   final List<AssignedPackageSummary> assignments;
+  final int? deliveringAssignmentId;
+  final ValueChanged<AssignedPackageSummary> onDeliver;
 
   String _displayValue(String value) {
     final normalized = value.trim();
@@ -381,9 +419,17 @@ class _AssignedPackagesSection extends StatelessWidget {
           ),
         ),
         actions: [
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cerrar'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              onDeliver(assignment);
+            },
+            icon: const Icon(Icons.local_shipping_rounded),
+            label: const Text('Entregar paquete'),
           ),
         ],
       ),
@@ -418,7 +464,9 @@ class _AssignedPackagesSection extends StatelessWidget {
                 label: 'Ver datos del paquete ${assignment.code}',
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => _showPackageDetails(context, assignment),
+                  onTap: deliveringAssignmentId == null
+                      ? () => _showPackageDetails(context, assignment)
+                      : null,
                   child: AppSoftCard(
                     padding: const EdgeInsets.all(14),
                     backgroundColor: AppTheme.yellowField,
@@ -458,10 +506,19 @@ class _AssignedPackagesSection extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: AppTheme.blue,
-                        ),
+                        if (deliveringAssignmentId == assignment.assignmentId)
+                          const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              color: AppTheme.blue,
+                            ),
+                          )
+                        else
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: AppTheme.blue,
+                          ),
                       ],
                     ),
                   ),
