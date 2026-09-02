@@ -273,6 +273,15 @@ class _DeliveryPhotoCapturePageState extends State<DeliveryPhotoCapturePage>
       return;
     }
 
+    if (originalFormat.contentType == 'application/octet-stream') {
+      setState(() {
+        _previewImageBytes = null;
+        _errorMessage =
+            'Ese formato de imagen no es compatible. Usa una foto JPG o PNG.';
+      });
+      return;
+    }
+
     if (bytes.lengthInBytes > _maxDeliveryPhotoBytes) {
       setState(() {
         _previewImageBytes = null;

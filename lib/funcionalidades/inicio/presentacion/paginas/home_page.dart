@@ -207,8 +207,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadSecurityPreferences() async {
-    final rememberSessionEnabled = await _sessionSecurityService
-        .isRememberSessionEnabled();
+    await _sessionSecurityService.setRememberSessionEnabled(true);
+    const rememberSessionEnabled = true;
     final savedEmail = await _sessionSecurityService.readSessionEmail();
     final biometricEnabledForUser = await _sessionSecurityService
         .isBiometricEnabledFor(widget.currentUser.alias);

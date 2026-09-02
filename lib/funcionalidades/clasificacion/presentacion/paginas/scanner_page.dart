@@ -396,8 +396,8 @@ class _ScannerPageState extends State<ScannerPage>
   }
 
   Future<void> _loadSecurityPreferences() async {
-    final rememberSessionEnabled = await _sessionSecurityService
-        .isRememberSessionEnabled();
+    await _sessionSecurityService.setRememberSessionEnabled(true);
+    const rememberSessionEnabled = true;
     final savedEmail = await _sessionSecurityService.readSessionEmail();
     final biometricEnabled = await _sessionSecurityService
         .isBiometricEnabledFor(widget.currentUser.alias);

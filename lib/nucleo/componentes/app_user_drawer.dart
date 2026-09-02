@@ -186,9 +186,9 @@ class AppUserDrawer extends StatelessWidget {
                       children: [
                         _DrawerSwitchTile(
                           icon: Icons.schedule_rounded,
-                          label: 'Recordar sesión',
-                          value: rememberSession,
-                          onChanged: onRememberSessionChanged,
+                          label: 'Sesión activa hasta cerrar sesión',
+                          value: true,
+                          onChanged: null,
                         ),
                         const Divider(height: 8, color: Color(0x331B305F)),
                         _DrawerSwitchTile(

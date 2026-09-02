@@ -26,6 +26,6 @@ class SelfPackageDeliveryRequest extends BaseMobileApiRequest
 
     protected function validationMessage(): string
     {
-        return 'Completa quien recibio el paquete, la fecha y la foto obligatoria.';
+        return 'Revisa los datos de la entrega e intenta nuevamente.';
     }
 }

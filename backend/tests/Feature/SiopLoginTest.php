@@ -131,4 +131,40 @@ class SiopLoginTest extends TestCase
             ->assertJsonPath('user.capabilities.is_courier', true)
             ->assertJsonPath('user.capabilities.can_search_packages', true);
     }
+
+    public function test_mobile_session_remains_valid_until_explicit_logout(): void
+    {
+        Http::fake([
+            'https://siop.example.test/login' => Http::response([
+                'user' => [
+                    'id' => 90,
+                    'name' => 'Cartero permanente',
+                    'alias' => 'cartero.permanente',
+                    'email' => 'cartero@correos.gob.bo',
+                    'roles' => ['cartero_ems'],
+                ],
+                'access_token' => 'siop-courier-token',
+            ]),
+        ]);
+
+        $token = $this->postJson('/api/mobile/auth/login', [
+            'alias' => 'cartero.permanente',
+            'password' => 'clave-secreta',
+        ])->assertOk()->json('token');
+
+        $this->travel(20)->years();
+
+        $this->withToken($token)
+            ->getJson('/api/mobile/auth/me')
+            ->assertOk()
+            ->assertJsonPath('user.alias', 'cartero.permanente');
+
+        $this->withToken($token)
+            ->postJson('/api/mobile/auth/logout')
+            ->assertOk();
+
+        $this->withToken($token)
+            ->getJson('/api/mobile/auth/me')
+            ->assertUnauthorized();
+    }
 }

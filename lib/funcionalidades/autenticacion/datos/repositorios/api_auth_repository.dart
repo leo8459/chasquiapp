@@ -111,9 +111,7 @@ class ApiAuthRepository extends AuthRepository {
     } on ApiException catch (error) {
       if (error.statusCode == 401) {
         _client.setAccessToken(null);
-        await _sessionSecurityService.clearAuthenticatedState(
-          preserveRememberedAccount: true,
-        );
+        await _sessionSecurityService.clearAuthenticatedState();
         throw StateError('Tu sesión guardada venció. Vuelve a iniciar sesión.');
       }
       throw StateError(

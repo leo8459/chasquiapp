@@ -87,6 +87,11 @@ class UserFriendlyErrorMapper {
       return 'No pudimos abrir la galería. Inténtalo nuevamente.';
     }
 
+    if (normalized.contains('fecha') &&
+        _containsAny(normalized, const ['entrega', 'hora', 'formato'])) {
+      return 'La fecha u hora de entrega no es válida. Selecciónala nuevamente e intenta guardar.';
+    }
+
     if (normalized.contains('firma')) {
       return 'No pudimos guardar la firma. Inténtalo nuevamente.';
     }

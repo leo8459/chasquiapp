@@ -61,4 +61,11 @@ return [
         'verify_ssl' => (bool) env('SIOP_COURIER_PACKAGES_VERIFY_SSL', true),
     ],
 
+    'siop_courier_notifications' => [
+        'pending_url' => env('SIOP_COURIER_NOTIFICATIONS_PENDING_URL', 'https://dev.correos.gob.bo:18100/api/chasqui/notificaciones/pendientes'),
+        'token' => env('SIOP_COURIER_NOTIFICATIONS_TOKEN'),
+        'timeout' => (int) env('SIOP_COURIER_NOTIFICATIONS_TIMEOUT', 20),
+        'verify_ssl' => (bool) env('SIOP_COURIER_NOTIFICATIONS_VERIFY_SSL', true),
+    ],
+
 ];

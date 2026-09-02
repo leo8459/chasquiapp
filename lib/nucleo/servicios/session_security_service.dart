@@ -16,6 +16,10 @@ class SessionSecurityService {
   static const _lastAuthAtKey = 'last_auth_at';
   static const _apiAccessTokenKey = 'api_access_token';
   static const _authenticatedUserPayloadKey = 'authenticated_user_payload';
+  static const _backgroundNotificationTokenKey =
+      'background_notification_access_token';
+  static const _backgroundNotificationUserIdKey =
+      'background_notification_user_id';
   static const _packageTrackingAssignmentsCachePrefix =
       'package_tracking_assignments_cache_v1';
   static const _packageTrackingInventoryCachePrefix =
@@ -63,6 +67,8 @@ class SessionSecurityService {
       _storage.delete(key: _lastAuthAtKey),
       _storage.delete(key: _apiAccessTokenKey),
       _storage.delete(key: _authenticatedUserPayloadKey),
+      _storage.delete(key: _backgroundNotificationTokenKey),
+      _storage.delete(key: _backgroundNotificationUserIdKey),
       clearCachedOperationalData(),
     ]);
 
@@ -193,6 +199,38 @@ class SessionSecurityService {
     await Future.wait([
       saveApiAccessToken(token),
       saveAuthenticatedUserPayload(userPayload),
+    ]);
+  }
+
+  Future<void> saveBackgroundNotificationSession({
+    required String token,
+    required int userId,
+  }) async {
+    final normalized = token.trim();
+    if (normalized.isEmpty || userId <= 0) return;
+    await Future.wait([
+      _storage.write(key: _backgroundNotificationTokenKey, value: normalized),
+      _storage.write(
+        key: _backgroundNotificationUserIdKey,
+        value: userId.toString(),
+      ),
+    ]);
+  }
+
+  Future<String?> readBackgroundNotificationToken() {
+    return _storage.read(key: _backgroundNotificationTokenKey);
+  }
+
+  Future<int?> readBackgroundNotificationUserId() async {
+    return int.tryParse(
+      await _storage.read(key: _backgroundNotificationUserIdKey) ?? '',
+    );
+  }
+
+  Future<void> clearBackgroundNotificationSession() async {
+    await Future.wait([
+      _storage.delete(key: _backgroundNotificationTokenKey),
+      _storage.delete(key: _backgroundNotificationUserIdKey),
     ]);
   }
 

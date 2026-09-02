@@ -329,7 +329,9 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
           'code': validation.normalizedCode,
           'description': description.trim(),
           'received_by': receivedByValidation.normalizedValue,
-          'delivered_at': deliveredAt.toIso8601String(),
+          // SIOP espera el valor de un datetime-local: YYYY-MM-DDTHH:mm,
+          // sin segundos ni desplazamiento de zona horaria.
+          'delivered_at': _formatDeliveryDateTime(deliveredAt),
         },
         fileField: 'delivery_photo',
         fileBytes: deliveryPhotoBytes,
@@ -339,6 +341,13 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
     } on ApiException catch (error) {
       throw StateError(error.message);
     }
+  }
+
+  String _formatDeliveryDateTime(DateTime value) {
+    String twoDigits(int number) => number.toString().padLeft(2, '0');
+    final local = value.toLocal();
+    return '${local.year}-${twoDigits(local.month)}-${twoDigits(local.day)}T'
+        '${twoDigits(local.hour)}:${twoDigits(local.minute)}';
   }
 
   Future<List<AssignedPackageSummary>> _findAssignmentsForUserFromApi(

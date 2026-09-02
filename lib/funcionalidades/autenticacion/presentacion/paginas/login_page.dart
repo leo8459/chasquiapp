@@ -119,6 +119,23 @@ class _LoginPageState extends State<LoginPage> {
 
     _handleUserInputChanged();
 
+    if (rememberSessionEnabled && preferredEmail != null) {
+      try {
+        final authorizedUser = await _authRepository.authorizeRememberedAccount(
+          preferredEmail,
+        );
+        await _sessionSecurityService.saveLastAuthAt(DateTime.now());
+        if (!mounted || _navigatingToHome) return;
+        await _goToHome(authorizedUser);
+        return;
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_mapAuthError(error))));
+      }
+    }
+
     if (mounted) {
       _bootstrapping.value = false;
     }
@@ -183,7 +200,7 @@ class _LoginPageState extends State<LoginPage> {
         );
         await _sessionSecurityService.saveLastAuthAt(DateTime.now());
         if (!mounted || _navigatingToHome) return;
-        _goToHome(authorizedUser);
+        await _goToHome(authorizedUser);
         return;
       } catch (error) {
         if (!mounted) return;
@@ -220,23 +237,17 @@ class _LoginPageState extends State<LoginPage> {
         email: alias,
         password: password,
       );
-      final rememberSessionEnabled = await _sessionSecurityService
-          .isRememberSessionEnabled();
-
-      if (rememberSessionEnabled) {
-        await Future.wait([
-          _sessionSecurityService.saveSessionEmail(authenticatedUser.alias),
-          widget.services.persistRememberedAuthState(authenticatedUser),
-        ]);
-        _savedUser = authenticatedUser.alias;
-      } else {
-        await _sessionSecurityService.clearSession();
-        await _sessionSecurityService.saveKnownAccount(authenticatedUser.alias);
-      }
+      await _sessionSecurityService.setRememberSessionEnabled(true);
+      await Future.wait([
+        _sessionSecurityService.saveSessionEmail(authenticatedUser.alias),
+        widget.services.persistRememberedAuthState(authenticatedUser),
+      ]);
+      _rememberSessionEnabled = true;
+      _savedUser = authenticatedUser.alias;
       await _sessionSecurityService.saveLastAuthAt(DateTime.now());
 
       if (!mounted) return;
-      _goToHome(authenticatedUser);
+      await _goToHome(authenticatedUser);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -249,9 +260,14 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _goToHome(AuthenticatedUser user) {
+  Future<void> _goToHome(AuthenticatedUser user) async {
     if (_navigatingToHome) return;
     _navigatingToHome = true;
+    final permissions = UserRolePermissions.fromRoles(user.roles);
+    if (permissions.hasCourierRole) {
+      await widget.services.activateCourierNotifications(user);
+    }
+    if (!mounted) return;
     final area = _resolveArea(user);
     Navigator.of(context)
         .pushReplacement(

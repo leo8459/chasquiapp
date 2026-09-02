@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:scan_agbc/nucleo/configuracion/api_config.dart';
 import 'package:scan_agbc/nucleo/red/api_client.dart';
 import 'package:scan_agbc/nucleo/servicios/biometric_auth_service.dart';
+import 'package:scan_agbc/nucleo/servicios/courier_notification_service.dart';
 import 'package:scan_agbc/nucleo/servicios/session_security_service.dart';
 import 'package:scan_agbc/funcionalidades/autenticacion/datos/repositorios/api_auth_repository.dart';
 import 'package:scan_agbc/funcionalidades/autenticacion/dominio/modelos/authenticated_user.dart';
@@ -26,6 +27,9 @@ class AppServices {
         sessionSecurityService ?? SessionSecurityService();
     final resolvedApiConfig = apiConfig ?? ApiConfig.fromEnvironment();
     final resolvedApiClient = apiClient ?? ApiClient(config: resolvedApiConfig);
+    final resolvedCourierNotificationService = CourierNotificationService(
+      resolvedSessionSecurityService,
+    );
     final resolvedPackageTrackingRepository =
         packageTrackingRepository ??
         ApiPackageTrackingRepository(resolvedApiClient);
@@ -49,6 +53,7 @@ class AppServices {
       scannerRepository: resolvedScannerRepository,
       apiConfig: resolvedApiConfig,
       apiClient: resolvedApiClient,
+      courierNotificationService: resolvedCourierNotificationService,
     );
   }
 
@@ -60,6 +65,7 @@ class AppServices {
     required this.scannerRepository,
     required this.apiConfig,
     required this.apiClient,
+    required this.courierNotificationService,
   });
 
   final SessionSecurityService sessionSecurityService;
@@ -69,6 +75,13 @@ class AppServices {
   final ScanRepository scannerRepository;
   final ApiConfig apiConfig;
   final ApiClient apiClient;
+  final CourierNotificationService courierNotificationService;
+
+  Future<void> activateCourierNotifications(AuthenticatedUser user) async {
+    final token = apiClient.currentAccessToken?.trim() ?? '';
+    if (token.isEmpty) return;
+    await courierNotificationService.enable(token: token, userId: user.id);
+  }
 
   Future<void> persistRememberedAuthState(AuthenticatedUser user) async {
     final token = apiClient.currentAccessToken;
@@ -89,10 +102,9 @@ class AppServices {
   }
 
   Future<void> clearActiveSession() async {
+    await courierNotificationService.disable();
     apiClient.setAccessToken(null);
-    await sessionSecurityService.clearAuthenticatedState(
-      preserveRememberedAccount: true,
-    );
+    await sessionSecurityService.clearAuthenticatedState();
     await _clearOperationalCaches(
       sessionSecurityService: sessionSecurityService,
       packageTrackingRepository: packageTrackingRepository,

@@ -9,13 +9,11 @@ class MobileApiTokenService
 {
     private const CACHE_PREFIX = 'mobile_api_token:';
 
-    private const TTL_DAYS = 30;
-
     public function issue(array $user, ?string $siopAccessToken = null): string
     {
         $token = Str::random(80);
 
-        Cache::put(
+        Cache::forever(
             $this->cacheKey($token),
             [
                 'id' => (int) ($user['id'] ?? 0),
@@ -24,7 +22,6 @@ class MobileApiTokenService
                 'siop_access_token' => trim((string) $siopAccessToken),
                 'issued_at' => now()->toIso8601String(),
             ],
-            now()->addDays(self::TTL_DAYS),
         );
 
         return $token;
@@ -37,7 +34,14 @@ class MobileApiTokenService
             return null;
         }
 
-        $payload = Cache::get($this->cacheKey($normalizedToken));
+        $cacheKey = $this->cacheKey($normalizedToken);
+        $payload = Cache::get($cacheKey);
+
+        if (is_array($payload)) {
+            // Promote tokens created by older releases (30-day TTL) so an
+            // authenticated mobile session only ends through explicit logout.
+            Cache::forever($cacheKey, $payload);
+        }
 
         return is_array($payload) ? $payload : null;
     }
