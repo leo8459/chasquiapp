@@ -50,6 +50,8 @@ Route::prefix('mobile')->as('mobile.')->group(function (): void {
             ->name('courier.pending-notifications');
         Route::post('/courier/assign-packages', [SelfPackageAssignmentController::class, 'store'])
             ->name('courier.assign-packages');
+        Route::post('/courier/pickup-contract-packages', [SelfPackageAssignmentController::class, 'pickup'])
+            ->name('courier.pickup-contract-packages');
         Route::post('/courier/deliver-package', [SelfPackageAssignmentController::class, 'deliver'])
             ->name('courier.deliver-package');
         Route::post('/couriers/{userId}/assignments/{assignmentId}/revert-to-warehouse', [MobileCourierController::class, 'revertAssignmentToWarehouse'])

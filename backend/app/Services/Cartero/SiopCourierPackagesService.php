@@ -11,6 +11,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Carbon;
+use Throwable;
 
 class SiopCourierPackagesService
 {
@@ -159,6 +160,82 @@ class SiopCourierPackagesService
         ];
     }
 
+    public function pickupContractPackages(array $rawCodes): array
+    {
+        $codes = array_values(array_unique(array_filter(array_map(
+            fn ($code): string => $this->normalizeCode((string) $code),
+            $rawCodes,
+        ))));
+        if ($codes === []) {
+            throw new MobileApiException(
+                'Selecciona al menos un codigo de paquete.',
+                422,
+                'PACKAGE_CODES_REQUIRED',
+            );
+        }
+
+        try {
+            $response = Http::acceptJson()
+                ->asForm()
+                ->withHeaders([
+                    'X-API-Token' => $this->requiredConfig('contract_pickup_token'),
+                ])
+                ->connectTimeout(5)
+                ->timeout(max(1, (int) config('services.siop_courier_packages.timeout', 20)))
+                ->withOptions([
+                    'verify' => (bool) config('services.siop_courier_packages.verify_ssl', true),
+                ])
+                ->post($this->requiredConfig('contract_pickup_url'), [
+                    'codigos' => $codes,
+                ]);
+        } catch (ConnectionException) {
+            throw new MobileApiException(
+                'No pudimos comunicarnos con el servicio de recojo SIOP.',
+                503,
+                'SIOP_CONTRACT_PICKUP_UNAVAILABLE',
+            );
+        }
+
+        if (! $response->successful()) {
+            $this->throwForFailedResponse($response);
+        }
+
+        $payload = $response->json();
+        if (! is_array($payload)) {
+            throw new MobileApiException(
+                'SIOP devolvio una respuesta de recojo no valida.',
+                502,
+                'SIOP_CONTRACT_PICKUP_INVALID_RESPONSE',
+            );
+        }
+
+        $processedCodes = array_values(array_filter(array_map(
+            fn ($code): string => $this->normalizeCode((string) $code),
+            (array) ($payload['codigos'] ?? []),
+        )));
+        $unprocessedCodes = array_values(array_filter(array_map(
+            fn ($code): string => $this->normalizeCode((string) $code),
+            (array) ($payload['no_procesados'] ?? []),
+        )));
+        $pickedUpCount = (int) ($payload['actualizados'] ?? count($processedCodes));
+        $message = trim((string) ($payload['message'] ?? ''));
+
+        if ($pickedUpCount <= 0) {
+            throw new MobileApiException(
+                $message !== '' ? $message : 'No se pudo recoger ningun paquete.',
+                422,
+                'SIOP_CONTRACT_PICKUP_NOT_PROCESSED',
+            );
+        }
+
+        return [
+            'picked_up_count' => $pickedUpCount,
+            'codes' => $processedCodes,
+            'unprocessed_codes' => $unprocessedCodes,
+            'message' => $message !== '' ? $message : 'Paquetes recogidos correctamente.',
+        ];
+    }
+
     public function deliverPackage(
         ?string $mobileToken,
         string $rawCode,
@@ -185,6 +262,11 @@ class SiopCourierPackagesService
             );
         }
 
+        $effectiveDeliveredAt = $this->safeDeliveryMinute(
+            $deliveredAt,
+            (string) ($package['latest_event_at'] ?? ''),
+        );
+
         $payload = $this->deliveryRequest(
             url: $this->requiredConfig('deliver_url'),
             integrationToken: $this->requiredConfig('deliver_token'),
@@ -195,7 +277,7 @@ class SiopCourierPackagesService
                 'descripcion' => trim($description),
                 'recibido_por' => trim($receivedBy),
                 // BoliPost usa el valor de un input HTML datetime-local.
-                'fecha_entrega' => $deliveredAt->format('Y-m-d\TH:i'),
+                'fecha_entrega' => $effectiveDeliveredAt->format('Y-m-d\TH:i'),
             ],
             deliveryPhoto: $deliveryPhoto,
         );
@@ -205,6 +287,30 @@ class SiopCourierPackagesService
             'code' => $code,
             'message' => trim((string) ($payload['message'] ?? 'Paquete entregado correctamente.')),
         ];
+    }
+
+    private function safeDeliveryMinute(Carbon $requestedAt, string $rawLatestEventAt): Carbon
+    {
+        $timezone = (string) config('app.timezone', 'America/La_Paz');
+        $effective = $requestedAt->copy()->setTimezone($timezone)->startOfMinute();
+        if (trim($rawLatestEventAt) === '') {
+            return $effective;
+        }
+
+        try {
+            $latestEvent = Carbon::parse($rawLatestEventAt)->setTimezone($timezone);
+        } catch (Throwable) {
+            return $effective;
+        }
+
+        $earliestValidMinute = $latestEvent->copy()->startOfMinute();
+        if ($latestEvent->second > 0 || $latestEvent->micro > 0) {
+            $earliestValidMinute->addMinute();
+        }
+
+        return $effective->lessThan($earliestValidMinute)
+            ? $earliestValidMinute
+            : $effective;
     }
 
     private function deliveryRequest(

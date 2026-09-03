@@ -32,6 +32,7 @@ class _SiopPackageDeliveryPageState extends State<SiopPackageDeliveryPage> {
   final TextEditingController _receivedByController = TextEditingController();
   final FocusNode _receivedByFocusNode = FocusNode();
   DateTime _deliveredAt = DateTime.now();
+  bool _deliveryDateTimeWasSelected = false;
   DeliveryPhotoCaptureResult? _deliveryPhoto;
   bool _saving = false;
 
@@ -87,7 +88,10 @@ class _SiopPackageDeliveryPageState extends State<SiopPackageDeliveryPage> {
       );
       return;
     }
-    setState(() => _deliveredAt = selected);
+    setState(() {
+      _deliveredAt = selected;
+      _deliveryDateTimeWasSelected = true;
+    });
   }
 
   Future<void> _submit() async {
@@ -144,7 +148,11 @@ class _SiopPackageDeliveryPageState extends State<SiopPackageDeliveryPage> {
         code: widget.assignment.code,
         description: _descriptionController.text,
         receivedBy: receivedByValidation.normalizedValue,
-        deliveredAt: _deliveredAt,
+        // Si el usuario no eligió una fecha histórica, toma la hora al
+        // confirmar y no la hora en que abrió esta pantalla.
+        deliveredAt: _deliveryDateTimeWasSelected
+            ? _deliveredAt
+            : DateTime.now(),
         deliveryPhotoBytes: photo.bytes,
         deliveryPhotoFileName:
             'entrega_${widget.assignment.code}_$timestamp.${photo.fileExtension}',

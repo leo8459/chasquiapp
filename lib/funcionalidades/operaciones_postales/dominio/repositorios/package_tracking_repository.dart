@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import '../modelos/available_couriers_result.dart';
 import '../modelos/assigned_package_summary.dart';
 import '../modelos/courier_inventory_packages_result.dart';
+import '../modelos/contract_package_pickup_result.dart';
 import '../modelos/package_tracking_result.dart';
 import '../modelos/tracking_events_result.dart';
 
@@ -21,6 +22,10 @@ abstract class PackageTrackingRepository {
   Future<List<AssignedPackageSummary>> findMySiopAssignedPackages();
 
   Future<void> assignSiopPackagesToMe(List<String> codes);
+
+  Future<ContractPackagePickupResult> pickupContractPackages(
+    List<String> codes,
+  );
 
   Future<void> deliverMySiopPackage({
     required String code,

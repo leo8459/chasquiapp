@@ -1,7 +1,9 @@
 class ApiConfig {
   const ApiConfig({required this.baseUrl});
 
-  static const defaultBaseUrl = 'http://127.0.0.1:8001/api';
+  // Dirección de la laptop dentro de la red Wi-Fi. En Android, 127.0.0.1
+  // apunta al teléfono y solo funciona mediante `adb reverse` por USB.
+  static const defaultBaseUrl = 'http://10.10.100.19:8001/api';
 
   final String baseUrl;
 

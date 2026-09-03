@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -17,7 +16,6 @@ const _courierNotificationUniqueWork = 'courierPendingNotificationsPeriodic';
 const _courierNotificationTag = 'courierNotifications';
 const _legacyCourierNotificationTag = 'courierNotificationsFiveMinutes';
 const _courierNotificationFrequency = Duration(minutes: 15);
-const _seenNotificationIdsKeyPrefix = 'courier_seen_notification_ids_v1';
 const _courierNotificationChannelId = 'courier_assignments_alerts_v2';
 const _courierNotificationChannel = AndroidNotificationChannel(
   _courierNotificationChannelId,
@@ -67,6 +65,9 @@ class CourierNotificationService {
     final token = (await session.readBackgroundNotificationToken())?.trim();
     if (token != null && token.isNotEmpty) {
       await schedulePeriodicCheck();
+      // Además de la tarea periódica, comprueba al arrancar para que el
+      // cartero no tenga que esperar al siguiente intervalo de Android.
+      unawaited(checkNow());
     }
   }
 
@@ -193,28 +194,14 @@ class CourierNotificationService {
           .whereType<Map>()
           .map((item) => Map<String, dynamic>.from(item))
           .toList(growable: false);
-      final prefs = await SharedPreferences.getInstance();
-      final seenKey = '${_seenNotificationIdsKeyPrefix}_$userId';
-      final seenIds = (prefs.getStringList(seenKey) ?? const <String>[])
-          .toSet();
-      final newNotifications = normalizedNotifications
-          .where((item) {
-            final id = _notificationIdentity(item);
-            return id.isNotEmpty && !seenIds.contains(id);
-          })
-          .toList(growable: false);
+      if (normalizedNotifications.isEmpty) return true;
 
-      if (newNotifications.isEmpty) {
-        debugPrint('Courier notifications: no hay avisos nuevos.');
-        return true;
-      }
-
-      final firstItem = newNotifications.first;
+      final firstItem = normalizedNotifications.first;
       final firstCode = firstItem['package_code']?.toString().trim() ?? '';
-      final count = newNotifications.length;
+      final count = normalizedNotifications.length;
       final body = count == 1 && firstCode.isNotEmpty
           ? 'Tienes asignado el paquete $firstCode.'
-          : 'Tienes $count paquetes nuevos asignados.';
+          : 'Tienes $count paquetes asignados pendientes de entrega.';
 
       await _notifications.show(
         id: 20260902,
@@ -237,31 +224,11 @@ class CourierNotificationService {
         ),
         payload: firstCode,
       );
-      final updatedSeenIds = <String>{
-        ...seenIds,
-        ...normalizedNotifications.map(_notificationIdentity),
-      }..remove('');
-      await prefs.setStringList(
-        seenKey,
-        updatedSeenIds.toList(growable: false).reversed.take(500).toList(),
-      );
       debugPrint('Courier notifications: alerta resumen publicada.');
       return true;
     } catch (error) {
       debugPrint('Courier notifications: fallo la consulta: $error');
       return false;
     }
-  }
-
-  static String _notificationIdentity(Map<String, dynamic> notification) {
-    final id = notification['id']?.toString().trim() ?? '';
-    if (id.isNotEmpty) return id;
-
-    // Respaldo estable para servidores antiguos que todavía no envían un ID.
-    return jsonEncode([
-      notification['package_code']?.toString().trim() ?? '',
-      notification['message']?.toString().trim() ?? '',
-      notification['created_at']?.toString().trim() ?? '',
-    ]);
   }
 }

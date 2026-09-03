@@ -15,6 +15,7 @@ import 'package:scan_agbc/funcionalidades/inicio/presentacion/componentes/app_si
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/assigned_package_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/available_couriers_result.dart';
 import 'package:scan_agbc/funcionalidades/cartero/presentacion/paginas/self_package_assignment_page.dart';
+import 'package:scan_agbc/funcionalidades/cartero/presentacion/paginas/contract_package_pickup_page.dart';
 import 'package:scan_agbc/funcionalidades/gestion/presentacion/paginas/courier_assignments_lookup_page.dart';
 import 'package:scan_agbc/funcionalidades/gestion/presentacion/paginas/recent_regional_assignments_page.dart';
 import 'package:scan_agbc/funcionalidades/seguimiento/presentacion/componentes/package_tracking_panel.dart';
@@ -316,6 +317,17 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _openContractPackagePickup() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ContractPackagePickupPage(
+          repository: widget.services.packageTrackingRepository,
+          onScanCodeWithCamera: _scanPackageCodeFromCamera,
+        ),
+      ),
+    );
+  }
+
   Future<void> _openScanner() async {
     final scannerController = ScannerController(
       scanRepository: widget.services.scannerRepository,
@@ -587,6 +599,7 @@ class _HomePageState extends State<HomePage> {
             ? _openRecentAssignments
             : null,
         onOpenSelfAssignment: _openSelfPackageAssignment,
+        onOpenContractPickup: _openContractPackagePickup,
         onOpenScanner: _canRegisterPackages ? _openScanner : null,
         scannerActionTitle: 'Clasificaciones',
         scannerActionSubtitle:

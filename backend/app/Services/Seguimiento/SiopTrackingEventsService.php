@@ -3,10 +3,12 @@
 namespace App\Services\Seguimiento;
 
 use App\Exceptions\MobileApiException;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class SiopTrackingEventsService
 {
@@ -51,7 +53,7 @@ class SiopTrackingEventsService
      * assignment endpoint while keeping that implementation detail out of
      * the mobile client.
      *
-     * @return array{id: int, code: string, type: string}|null
+     * @return array{id: int, code: string, type: string, latest_event_at: string}|null
      */
     public function findPackageIdentityByCode(string $rawCode): ?array
     {
@@ -77,7 +79,35 @@ class SiopTrackingEventsService
             'id' => $packageId,
             'code' => $code,
             'type' => $packageType,
+            'latest_event_at' => $this->latestEventAt($package),
         ];
+    }
+
+    private function latestEventAt(array $package): string
+    {
+        $latest = null;
+        foreach ((array) ($package['eventos'] ?? []) as $event) {
+            if (! is_array($event)) {
+                continue;
+            }
+
+            $rawDate = trim((string) ($event['fecha'] ?? $event['created_at'] ?? ''));
+            if ($rawDate === '') {
+                continue;
+            }
+
+            try {
+                $candidate = CarbonImmutable::parse($rawDate);
+            } catch (Throwable) {
+                continue;
+            }
+
+            if ($latest === null || $candidate->greaterThan($latest)) {
+                $latest = $candidate;
+            }
+        }
+
+        return $latest?->toIso8601String() ?? '';
     }
 
     /**

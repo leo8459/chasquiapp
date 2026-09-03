@@ -5,6 +5,7 @@ import 'package:scan_agbc/nucleo/red/api_client.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/available_couriers_result.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/assigned_package_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/courier_inventory_packages_result.dart';
+import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/contract_package_pickup_result.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/courier_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/inventory_package_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/package_tracking_result.dart';
@@ -286,6 +287,36 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
         '/mobile/courier/assign-packages',
         authorize: true,
         body: {'codes': normalizedCodes},
+      );
+    } on ApiException catch (error) {
+      throw StateError(error.message);
+    }
+  }
+
+  @override
+  Future<ContractPackagePickupResult> pickupContractPackages(
+    List<String> codes,
+  ) async {
+    final normalizedCodes = codes
+        .map(PackageCodeClassifier.normalize)
+        .where((code) => code.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    if (normalizedCodes.isEmpty) {
+      throw StateError('Selecciona al menos un paquete válido.');
+    }
+
+    try {
+      final payload = await _client.postJsonMap(
+        '/mobile/courier/pickup-contract-packages',
+        authorize: true,
+        body: {'codes': normalizedCodes},
+      );
+      return ContractPackagePickupResult(
+        pickedUpCount: _toInt(payload['picked_up_count']),
+        codes: _stringList(payload['codes']),
+        unprocessedCodes: _stringList(payload['unprocessed_codes']),
+        message: payload['message']?.toString().trim() ?? '',
       );
     } on ApiException catch (error) {
       throw StateError(error.message);
@@ -935,6 +966,14 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
       return value.toInt();
     }
     return int.tryParse(value?.toString() ?? '');
+  }
+
+  List<String> _stringList(dynamic value) {
+    if (value is! List) return const <String>[];
+    return value
+        .map((item) => item?.toString().trim() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
   }
 
   Future<Map<String, dynamic>> _getJsonMapWithCache({

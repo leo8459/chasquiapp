@@ -21,6 +21,7 @@ class PackageTrackingPanel extends StatefulWidget {
         'Busca por nombre y revisa sus asignaciones activas.',
     this.onOpenRecentAssignments,
     this.onOpenSelfAssignment,
+    this.onOpenContractPickup,
     this.onOpenScanner,
     this.scannerActionTitle = 'Registrar paquete',
     this.scannerActionSubtitle =
@@ -36,6 +37,7 @@ class PackageTrackingPanel extends StatefulWidget {
   final String courierLookupActionSubtitle;
   final VoidCallback? onOpenRecentAssignments;
   final VoidCallback? onOpenSelfAssignment;
+  final VoidCallback? onOpenContractPickup;
   final VoidCallback? onOpenScanner;
   final String scannerActionTitle;
   final String scannerActionSubtitle;
@@ -177,6 +179,7 @@ class _PackageTrackingPanelState extends State<PackageTrackingPanel> {
                 courierLookupActionSubtitle: widget.courierLookupActionSubtitle,
                 onOpenRecentAssignments: widget.onOpenRecentAssignments,
                 onOpenSelfAssignment: widget.onOpenSelfAssignment,
+                onOpenContractPickup: widget.onOpenContractPickup,
                 onOpenScanner: widget.onOpenScanner,
                 onOpenTrackingEvents: _openTrackingEvents,
                 scannerActionTitle: widget.scannerActionTitle,
@@ -208,6 +211,7 @@ class _SearchCard extends StatelessWidget {
     required this.courierLookupActionSubtitle,
     required this.onOpenRecentAssignments,
     required this.onOpenSelfAssignment,
+    required this.onOpenContractPickup,
     required this.onOpenScanner,
     required this.onOpenTrackingEvents,
     required this.scannerActionTitle,
@@ -221,6 +225,7 @@ class _SearchCard extends StatelessWidget {
   final String courierLookupActionSubtitle;
   final VoidCallback? onOpenRecentAssignments;
   final VoidCallback? onOpenSelfAssignment;
+  final VoidCallback? onOpenContractPickup;
   final VoidCallback? onOpenScanner;
   final VoidCallback onOpenTrackingEvents;
   final String scannerActionTitle;
@@ -258,6 +263,18 @@ class _SearchCard extends StatelessWidget {
           subtitle:
               'Escanea o agrega varios códigos, revisa la prelista y asígnalos a tu cuenta.',
           onTap: onOpenSelfAssignment!,
+        ),
+      );
+    }
+
+    if (onOpenContractPickup != null) {
+      addSection(
+        _QuickActionCard(
+          icon: Icons.inventory_2_rounded,
+          title: 'Recoger paquetes',
+          subtitle:
+              'Escanea con la cámara o ingresa manualmente paquetes de contrato para confirmar su recojo.',
+          onTap: onOpenContractPickup!,
         ),
       );
     }

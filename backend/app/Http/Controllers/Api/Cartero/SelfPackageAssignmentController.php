@@ -46,4 +46,13 @@ class SelfPackageAssignmentController extends Controller
             ),
         );
     }
+
+    public function pickup(
+        SelfPackageAssignmentRequest $request,
+        SiopCourierPackagesService $service,
+    ): JsonResponse {
+        return MobileApiResponse::success(
+            $service->pickupContractPackages($request->array('codes')),
+        );
+    }
 }

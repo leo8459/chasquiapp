@@ -22,6 +22,8 @@ class CourierPackagesTest extends TestCase
             'services.siop_courier_packages.assign_token' => 'assign-integration-token',
             'services.siop_courier_packages.deliver_url' => 'https://siop.example.test/deliver',
             'services.siop_courier_packages.deliver_token' => 'deliver-integration-token',
+            'services.siop_courier_packages.contract_pickup_url' => 'https://siop.example.test/pickup-contract',
+            'services.siop_courier_packages.contract_pickup_token' => 'pickup-integration-token',
             'services.siop_courier_packages.verify_ssl' => true,
             'services.siop_tracking_events.url' => 'https://siop.example.test/events',
             'services.siop_tracking_events.token' => 'events-integration-token',
@@ -190,6 +192,91 @@ class CourierPackagesTest extends TestCase
                 && $hasPart('fecha_entrega', '2026-09-01T12:30')
                 && $request->hasFile('foto');
         });
+    }
+
+    public function test_delivery_time_is_advanced_when_the_latest_event_has_seconds_in_the_same_minute(): void
+    {
+        Http::fake([
+            'https://siop.example.test/events*' => Http::response(['data' => [[
+                'id' => 500,
+                'tipo' => 'ems',
+                'codigo' => 'EE123456789BO',
+                'eventos' => [[
+                    'nombre' => 'Asignado a cartero',
+                    'fecha' => '2026-09-03T12:29:48-04:00',
+                ]],
+            ]]]),
+            'https://siop.example.test/deliver' => Http::response([
+                'message' => 'Paquete entregado.',
+                'entregados' => 1,
+            ]),
+        ]);
+
+        $this->withToken($this->issueMobileToken())
+            ->post('/api/mobile/courier/deliver-package', [
+                'code' => 'EE123456789BO',
+                'received_by' => 'Juan Perez',
+                'delivered_at' => '2026-09-03T12:29',
+                'delivery_photo' => UploadedFile::fake()->image('entrega.jpg'),
+            ])
+            ->assertOk();
+
+        Http::assertSent(function (Request $request): bool {
+            if ($request->url() !== 'https://siop.example.test/deliver') {
+                return false;
+            }
+
+            return collect($request->data())->contains(
+                fn (array $part): bool => ($part['name'] ?? null) === 'fecha_entrega'
+                    && (string) ($part['contents'] ?? '') === '2026-09-03T12:30',
+            );
+        });
+    }
+
+    public function test_courier_can_pick_up_contract_packages(): void
+    {
+        Http::fake([
+            'https://siop.example.test/pickup-contract' => Http::response([
+                'message' => 'Paquetes recogidos correctamente.',
+                'actualizados' => 2,
+                'codigos' => ['C0001A89843BO', 'C0001A89844BO'],
+                'no_procesados' => [],
+            ]),
+        ]);
+
+        $this->withToken($this->issueMobileToken())
+            ->postJson('/api/mobile/courier/pickup-contract-packages', [
+                'codes' => ['c0001a89843bo', 'C0001A89844BO'],
+            ])
+            ->assertOk()
+            ->assertJsonPath('picked_up_count', 2)
+            ->assertJsonPath('codes.0', 'C0001A89843BO')
+            ->assertJsonPath('unprocessed_codes', []);
+
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://siop.example.test/pickup-contract'
+            && ! $request->hasHeader('Authorization')
+            && $request->hasHeader('X-API-Token', 'pickup-integration-token')
+            && $request['codigos'] === ['C0001A89843BO', 'C0001A89844BO']
+        );
+    }
+
+    public function test_pickup_reports_when_no_contract_package_was_processed(): void
+    {
+        Http::fake([
+            'https://siop.example.test/pickup-contract' => Http::response([
+                'message' => 'No se actualizo ningun envio. Verifica codigo, estado y ciudad.',
+                'actualizados' => 0,
+                'codigos' => [],
+                'no_procesados' => ['C0001A89843BO'],
+            ]),
+        ]);
+
+        $this->withToken($this->issueMobileToken())
+            ->postJson('/api/mobile/courier/pickup-contract-packages', [
+                'codes' => ['C0001A89843BO'],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('error_code', 'SIOP_CONTRACT_PICKUP_NOT_PROCESSED');
     }
 
     public function test_assignment_is_successful_when_siop_fails_after_committing_it(): void

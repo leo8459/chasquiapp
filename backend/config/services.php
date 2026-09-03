@@ -56,6 +56,8 @@ return [
         'assign_token' => env('SIOP_COURIER_ASSIGN_TOKEN'),
         'deliver_url' => env('SIOP_COURIER_DELIVER_URL', 'https://dev.correos.gob.bo:18100/api/chasqui/paquetes/entregar'),
         'deliver_token' => env('SIOP_COURIER_DELIVER_TOKEN'),
+        'contract_pickup_url' => env('SIOP_CONTRACT_PICKUP_URL', 'https://dev.correos.gob.bo:18100/api/paquetes-contrato/recoger'),
+        'contract_pickup_token' => env('SIOP_CONTRACT_PICKUP_TOKEN'),
         'deliver_timeout' => (int) env('SIOP_COURIER_DELIVER_TIMEOUT', 60),
         'timeout' => (int) env('SIOP_COURIER_PACKAGES_TIMEOUT', 20),
         'verify_ssl' => (bool) env('SIOP_COURIER_PACKAGES_VERIFY_SSL', true),
