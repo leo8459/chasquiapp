@@ -24,7 +24,7 @@ abstract class PackageTrackingRepository {
   Future<void> assignSiopPackagesToMe(List<String> codes);
 
   Future<ContractPackagePickupResult> pickupContractPackages(
-    List<String> codes,
+    Map<String, double> weightsByCode,
   );
 
   Future<void> deliverMySiopPackage({

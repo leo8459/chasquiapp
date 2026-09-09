@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Cartero;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\Movil\ContractPackagePickupRequest;
 use App\Http\Requests\Api\Movil\SelfPackageAssignmentRequest;
 use App\Http\Requests\Api\Movil\SelfPackageDeliveryRequest;
 use App\Services\Cartero\SiopCourierPackagesService;
@@ -48,11 +49,11 @@ class SelfPackageAssignmentController extends Controller
     }
 
     public function pickup(
-        SelfPackageAssignmentRequest $request,
+        ContractPackagePickupRequest $request,
         SiopCourierPackagesService $service,
     ): JsonResponse {
         return MobileApiResponse::success(
-            $service->pickupContractPackages($request->array('codes')),
+            $service->pickupContractPackages($request->array('shipments')),
         );
     }
 }

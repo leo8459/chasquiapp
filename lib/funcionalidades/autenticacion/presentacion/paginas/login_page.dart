@@ -586,7 +586,7 @@ class _Header extends StatelessWidget {
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  'AGENCIA BOLIVIANA DE CORREOS',
+                  'CORREOS DE BOLIVIA',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.labelSmall?.copyWith(

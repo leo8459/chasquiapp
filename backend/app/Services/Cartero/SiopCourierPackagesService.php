@@ -8,9 +8,9 @@ use App\Services\Seguimiento\SiopTrackingEventsService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Carbon;
 use Throwable;
 
 class SiopCourierPackagesService
@@ -160,19 +160,36 @@ class SiopCourierPackagesService
         ];
     }
 
-    public function pickupContractPackages(array $rawCodes): array
+    public function pickupContractPackages(array $rawShipments): array
     {
-        $codes = array_values(array_unique(array_filter(array_map(
-            fn ($code): string => $this->normalizeCode((string) $code),
-            $rawCodes,
-        ))));
-        if ($codes === []) {
+        $shipmentsByCode = [];
+        foreach ($rawShipments as $rawShipment) {
+            if (! is_array($rawShipment)) {
+                continue;
+            }
+
+            $code = $this->normalizeCode((string) ($rawShipment['code'] ?? ''));
+            $weight = round((float) ($rawShipment['weight'] ?? 0), 3);
+            if ($code !== '' && $weight >= 0.001 && $weight <= 150) {
+                $shipmentsByCode[$code] = $weight;
+            }
+        }
+        if ($shipmentsByCode === []) {
             throw new MobileApiException(
-                'Selecciona al menos un codigo de paquete.',
+                'Selecciona al menos un paquete con un peso valido.',
                 422,
-                'PACKAGE_CODES_REQUIRED',
+                'PACKAGE_SHIPMENTS_REQUIRED',
             );
         }
+        $codes = array_keys($shipmentsByCode);
+        $shipments = array_map(
+            fn (string $code, float $weight): array => [
+                'codigo' => $code,
+                'peso' => $weight,
+            ],
+            $codes,
+            array_values($shipmentsByCode),
+        );
 
         try {
             $response = Http::acceptJson()
@@ -186,7 +203,7 @@ class SiopCourierPackagesService
                     'verify' => (bool) config('services.siop_courier_packages.verify_ssl', true),
                 ])
                 ->post($this->requiredConfig('contract_pickup_url'), [
-                    'codigos' => $codes,
+                    'envios' => $shipments,
                 ]);
         } catch (ConnectionException) {
             throw new MobileApiException(

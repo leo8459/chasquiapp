@@ -81,32 +81,13 @@ class _ContractPackagePickupPageState extends State<ContractPackagePickupPage> {
 
   Future<void> _pickupSelected() async {
     if (_selectedCodes.isEmpty || _submitting) return;
-    final count = _selectedCodes.length;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar recojo'),
-        content: Text(
-          'Se marcarán $count paquete(s) de contrato como recogidos.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Recoger'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
+    final weightsByCode = await _requestPickupWeights();
+    if (weightsByCode == null || !mounted) return;
 
     setState(() => _submitting = true);
     try {
       final result = await widget.repository.pickupContractPackages(
-        _selectedCodes.toList(growable: false),
+        weightsByCode,
       );
       if (!mounted) return;
       setState(() {
@@ -137,6 +118,14 @@ class _ContractPackagePickupPageState extends State<ContractPackagePickupPage> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  Future<Map<String, double>?> _requestPickupWeights() async {
+    final codes = _selectedCodes.toList()..sort();
+    return showDialog<Map<String, double>>(
+      context: context,
+      builder: (_) => _PickupWeightDialog(codes: codes),
+    );
   }
 
   @override
@@ -237,6 +226,134 @@ class _ContractPackagePickupPageState extends State<ContractPackagePickupPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PickupWeightDialog extends StatefulWidget {
+  const _PickupWeightDialog({required this.codes});
+
+  final List<String> codes;
+
+  @override
+  State<_PickupWeightDialog> createState() => _PickupWeightDialogState();
+}
+
+class _PickupWeightDialogState extends State<_PickupWeightDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final Map<String, TextEditingController> _controllers;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = {
+      for (final code in widget.codes) code: TextEditingController(),
+    };
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  double? _parseWeight(String rawValue) {
+    return double.tryParse(rawValue.trim().replaceAll(',', '.'));
+  }
+
+  String? _validateWeight(String? rawValue) {
+    final value = _parseWeight(rawValue ?? '');
+    if (value == null) return 'Ingresa un peso numérico.';
+    if (value < 0.001 || value > 150) {
+      return 'Debe estar entre 0,001 y 150,000 kg.';
+    }
+    return null;
+  }
+
+  void _submit() {
+    if (_formKey.currentState?.validate() != true) return;
+    Navigator.of(context).pop({
+      for (final code in widget.codes)
+        code: _parseWeight(_controllers[code]!.text)!,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Confirmar recojo'),
+      content: SizedBox(
+        width: 480,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Ingresa el peso de cada paquete antes de recogerlo.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Peso permitido: 0,001 a 150,000 kg.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+                for (var index = 0; index < widget.codes.length; index++) ...[
+                  Text(
+                    widget.codes[index],
+                    style: const TextStyle(
+                      color: AppTheme.blueDark,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _controllers[widget.codes[index]],
+                    autofocus: index == 0,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                    ],
+                    decoration: const InputDecoration(
+                      labelText: 'Peso',
+                      hintText: 'Ej. 1,250',
+                      suffixText: 'kg',
+                      prefixIcon: Icon(Icons.monitor_weight_rounded),
+                    ),
+                    textInputAction: index == widget.codes.length - 1
+                        ? TextInputAction.done
+                        : TextInputAction.next,
+                    onFieldSubmitted: index == widget.codes.length - 1
+                        ? (_) => _submit()
+                        : null,
+                    validator: _validateWeight,
+                  ),
+                  if (index != widget.codes.length - 1)
+                    const SizedBox(height: 14),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton.icon(
+          onPressed: _submit,
+          icon: const Icon(Icons.inventory_2_rounded),
+          label: const Text('Recoger'),
+        ),
+      ],
     );
   }
 }

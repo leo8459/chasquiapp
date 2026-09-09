@@ -295,22 +295,31 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
 
   @override
   Future<ContractPackagePickupResult> pickupContractPackages(
-    List<String> codes,
+    Map<String, double> weightsByCode,
   ) async {
-    final normalizedCodes = codes
-        .map(PackageCodeClassifier.normalize)
-        .where((code) => code.isNotEmpty)
-        .toSet()
-        .toList(growable: false);
-    if (normalizedCodes.isEmpty) {
+    final normalizedShipments = <String, double>{};
+    for (final entry in weightsByCode.entries) {
+      final code = PackageCodeClassifier.normalize(entry.key);
+      if (code.isNotEmpty) normalizedShipments[code] = entry.value;
+    }
+    if (normalizedShipments.isEmpty) {
       throw StateError('Selecciona al menos un paquete válido.');
+    }
+    if (normalizedShipments.values.any(
+      (weight) => weight < 0.001 || weight > 150,
+    )) {
+      throw StateError('El peso debe estar entre 0,001 y 150,000 kg.');
     }
 
     try {
       final payload = await _client.postJsonMap(
         '/mobile/courier/pickup-contract-packages',
         authorize: true,
-        body: {'codes': normalizedCodes},
+        body: {
+          'shipments': normalizedShipments.entries
+              .map((entry) => {'code': entry.key, 'weight': entry.value})
+              .toList(growable: false),
+        },
       );
       return ContractPackagePickupResult(
         pickedUpCount: _toInt(payload['picked_up_count']),

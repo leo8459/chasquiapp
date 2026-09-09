@@ -246,7 +246,10 @@ class CourierPackagesTest extends TestCase
 
         $this->withToken($this->issueMobileToken())
             ->postJson('/api/mobile/courier/pickup-contract-packages', [
-                'codes' => ['c0001a89843bo', 'C0001A89844BO'],
+                'shipments' => [
+                    ['code' => 'c0001a89843bo', 'weight' => 1.25],
+                    ['code' => 'C0001A89844BO', 'weight' => 0.375],
+                ],
             ])
             ->assertOk()
             ->assertJsonPath('picked_up_count', 2)
@@ -256,7 +259,10 @@ class CourierPackagesTest extends TestCase
         Http::assertSent(fn (Request $request): bool => $request->url() === 'https://siop.example.test/pickup-contract'
             && ! $request->hasHeader('Authorization')
             && $request->hasHeader('X-API-Token', 'pickup-integration-token')
-            && $request['codigos'] === ['C0001A89843BO', 'C0001A89844BO']
+            && $request['envios'] === [
+                ['codigo' => 'C0001A89843BO', 'peso' => 1.25],
+                ['codigo' => 'C0001A89844BO', 'peso' => 0.375],
+            ]
         );
     }
 
@@ -273,10 +279,27 @@ class CourierPackagesTest extends TestCase
 
         $this->withToken($this->issueMobileToken())
             ->postJson('/api/mobile/courier/pickup-contract-packages', [
-                'codes' => ['C0001A89843BO'],
+                'shipments' => [
+                    ['code' => 'C0001A89843BO', 'weight' => 1.25],
+                ],
             ])
             ->assertUnprocessable()
             ->assertJsonPath('error_code', 'SIOP_CONTRACT_PICKUP_NOT_PROCESSED');
+    }
+
+    public function test_pickup_requires_a_valid_weight_for_each_contract_package(): void
+    {
+        Http::fake();
+
+        $this->withToken($this->issueMobileToken())
+            ->postJson('/api/mobile/courier/pickup-contract-packages', [
+                'shipments' => [
+                    ['code' => 'C0001A89843BO', 'weight' => 0],
+                ],
+            ])
+            ->assertUnprocessable();
+
+        Http::assertNothingSent();
     }
 
     public function test_assignment_is_successful_when_siop_fails_after_committing_it(): void
