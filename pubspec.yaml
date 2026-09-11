@@ -19,6 +19,9 @@ dependencies:
   local_auth: ^2.3.0
   shared_preferences: ^2.5.4
   workmanager: ^0.10.9
+  geolocator: ^14.0.2
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:

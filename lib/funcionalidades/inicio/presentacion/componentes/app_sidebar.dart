@@ -18,6 +18,7 @@ class AppSidebar extends StatelessWidget {
     required this.onUseBiometricChanged,
     required this.onLogout,
     required this.services,
+    this.actionItems = const <AppDrawerActionItem>[],
     this.infoItems = const [
       AppDrawerInfoItem(
         icon: Icons.search_rounded,
@@ -39,6 +40,7 @@ class AppSidebar extends StatelessWidget {
   final ValueChanged<bool> onUseBiometricChanged;
   final Future<void> Function() onLogout;
   final AppServices services;
+  final List<AppDrawerActionItem> actionItems;
   final List<AppDrawerInfoItem> infoItems;
 
   @override
@@ -62,6 +64,7 @@ class AppSidebar extends StatelessWidget {
           (route) => false,
         );
       },
+      actionItems: actionItems,
       infoItems: infoItems,
     );
   }

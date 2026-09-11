@@ -3,10 +3,12 @@
 use App\Http\Controllers\Api\Autenticacion\MobileAuthController;
 use App\Http\Controllers\Api\Cartero\MobileAssignmentDeliveryController;
 use App\Http\Controllers\Api\Cartero\MobileCarteroController;
-use App\Http\Controllers\Api\Cartero\SelfPackageAssignmentController;
 use App\Http\Controllers\Api\Cartero\SelfCourierNotificationController;
+use App\Http\Controllers\Api\Cartero\SelfPackageAssignmentController;
 use App\Http\Controllers\Api\Clasificacion\MobileScannerController;
+use App\Http\Controllers\Api\Gestion\MobileBitacoraController;
 use App\Http\Controllers\Api\Gestion\MobileCourierController;
+use App\Http\Controllers\Api\Gestion\MobileGasolinaController;
 use App\Http\Controllers\Api\Seguimiento\MobileTrackingController;
 use App\Http\Controllers\Api\Seguimiento\TrackingEventsController;
 use App\Http\Controllers\Api\Seguimiento\TrackingLookupController;
@@ -38,6 +40,14 @@ Route::prefix('mobile')->as('mobile.')->group(function (): void {
         Route::match(['GET', 'POST'], '/tracking/events', TrackingEventsController::class)
             ->name('tracking.events');
         Route::get('/couriers', [MobileCourierController::class, 'index'])->name('couriers.index');
+        Route::get('/bitacoras', MobileBitacoraController::class)->name('bitacoras.index');
+        Route::get('/bitacoras/vehiculos', [MobileBitacoraController::class, 'vehicles'])
+            ->name('bitacoras.vehicles');
+        Route::get('/bitacoras/conductores', [MobileBitacoraController::class, 'drivers'])
+            ->name('bitacoras.drivers');
+        Route::post('/bitacoras', [MobileBitacoraController::class, 'store'])->name('bitacoras.store');
+        Route::get('/gasolinas', [MobileGasolinaController::class, 'index'])->name('gasolinas.index');
+        Route::post('/gasolinas', [MobileGasolinaController::class, 'store'])->name('gasolinas.store');
         Route::get('/couriers/lookup', [MobileCourierController::class, 'lookup'])->name('couriers.lookup');
         Route::get('/couriers/assignments/recent', [MobileCourierController::class, 'regionalRecentAssignments'])
             ->name('couriers.assignments.regional-recent');

@@ -42,6 +42,22 @@ return [
         'verify_ssl' => (bool) env('SIOP_TRACKING_EVENTS_VERIFY_SSL', true),
     ],
 
+    'siop_bitacoras' => [
+        'url' => env('SIOP_BITACORA_URL', 'https://dev.correos.gob.bo:18100/api/bitacoras'),
+        'read_token' => env('SIOP_BITACORA_TOKEN'),
+        'create_token' => env('SIOP_BITACORA_CREATE_TOKEN'),
+        'timeout' => (int) env('SIOP_BITACORA_TIMEOUT', 20),
+        'verify_ssl' => (bool) env('SIOP_BITACORA_VERIFY_SSL', true),
+    ],
+
+    'siop_gasolinas' => [
+        'url' => env('SIOP_GASOLINA_URL', 'https://dev.correos.gob.bo:18100/api/gasolinas'),
+        'read_token' => env('SIOP_GASOLINA_TOKEN'),
+        'create_token' => env('SIOP_GASOLINA_CREATE_TOKEN'),
+        'timeout' => (int) env('SIOP_GASOLINA_TIMEOUT', 20),
+        'verify_ssl' => (bool) env('SIOP_GASOLINA_VERIFY_SSL', true),
+    ],
+
     'siop_login' => [
         'url' => env('SIOP_LOGIN_URL', 'https://dev.correos.gob.bo:18100/api/integraciones/siop/login'),
         'token' => env('SIOP_LOGIN_TOKEN'),

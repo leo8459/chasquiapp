@@ -14,6 +14,18 @@ class AppDrawerInfoItem {
   final String subtitle;
 }
 
+class AppDrawerActionItem {
+  const AppDrawerActionItem({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+}
+
 class AppUserDrawer extends StatelessWidget {
   const AppUserDrawer({
     super.key,
@@ -28,6 +40,7 @@ class AppUserDrawer extends StatelessWidget {
     required this.onUseBiometricChanged,
     required this.onLogout,
     this.infoItems = const <AppDrawerInfoItem>[],
+    this.actionItems = const <AppDrawerActionItem>[],
     this.showLogoWatermark = false,
     this.logoutLabel = 'Cerrar sesión',
   });
@@ -43,6 +56,7 @@ class AppUserDrawer extends StatelessWidget {
   final ValueChanged<bool> onUseBiometricChanged;
   final Future<void> Function() onLogout;
   final List<AppDrawerInfoItem> infoItems;
+  final List<AppDrawerActionItem> actionItems;
   final bool showLogoWatermark;
   final String logoutLabel;
 
@@ -209,6 +223,20 @@ class AppUserDrawer extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (actionItems.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    const _DrawerSectionTitle(
+                      icon: Icons.apps_rounded,
+                      title: 'Navegación',
+                    ),
+                    const SizedBox(height: 8),
+                    ...actionItems.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _DrawerNavigationTile(item: item),
+                      ),
+                    ),
+                  ],
                   if (infoItems.isNotEmpty) ...[
                     const SizedBox(height: 14),
                     const _DrawerSectionTitle(
@@ -235,6 +263,50 @@ class AppUserDrawer extends StatelessWidget {
                     onTap: onLogout,
                   ),
                 ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawerNavigationTile extends StatelessWidget {
+  const _DrawerNavigationTile({required this.item});
+
+  final AppDrawerActionItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: item.onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+          decoration: AppTheme.buildSoftCardDecoration(
+            backgroundColor: const Color(0xCCFFF1CF),
+            borderRadius: BorderRadius.circular(14),
+            borderColor: AppTheme.softBorder,
+          ),
+          child: Row(
+            children: [
+              Icon(item.icon, color: AppTheme.blue, size: 22),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(color: AppTheme.blue),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.blue,
+                size: 22,
               ),
             ],
           ),

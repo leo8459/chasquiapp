@@ -8,6 +8,10 @@ import 'package:scan_agbc/nucleo/servicios/session_security_service.dart';
 import 'package:scan_agbc/funcionalidades/autenticacion/datos/repositorios/api_auth_repository.dart';
 import 'package:scan_agbc/funcionalidades/autenticacion/dominio/modelos/authenticated_user.dart';
 import 'package:scan_agbc/funcionalidades/autenticacion/dominio/repositorios/auth_repository.dart';
+import 'package:scan_agbc/funcionalidades/bitacoras/datos/repositorios/api_bitacora_repository.dart';
+import 'package:scan_agbc/funcionalidades/bitacoras/dominio/repositorios/bitacora_repository.dart';
+import 'package:scan_agbc/funcionalidades/gasolina/datos/repositorios/api_gasolina_repository.dart';
+import 'package:scan_agbc/funcionalidades/gasolina/dominio/repositorios/gasolina_repository.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/datos/repositorios/api_package_tracking_repository.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/repositorios/package_tracking_repository.dart';
 import 'package:scan_agbc/funcionalidades/clasificacion/datos/repositorios/api_scanner_repository.dart';
@@ -21,6 +25,8 @@ class AppServices {
     ApiClient? apiClient,
     AuthRepository? authRepository,
     PackageTrackingRepository? packageTrackingRepository,
+    BitacoraRepository? bitacoraRepository,
+    GasolinaRepository? gasolinaRepository,
     ScanRepository? scannerRepository,
   }) {
     final resolvedSessionSecurityService =
@@ -50,6 +56,10 @@ class AppServices {
             ),
           ),
       packageTrackingRepository: resolvedPackageTrackingRepository,
+      bitacoraRepository:
+          bitacoraRepository ?? ApiBitacoraRepository(resolvedApiClient),
+      gasolinaRepository:
+          gasolinaRepository ?? ApiGasolinaRepository(resolvedApiClient),
       scannerRepository: resolvedScannerRepository,
       apiConfig: resolvedApiConfig,
       apiClient: resolvedApiClient,
@@ -62,6 +72,8 @@ class AppServices {
     required this.biometricAuthService,
     required this.authRepository,
     required this.packageTrackingRepository,
+    required this.bitacoraRepository,
+    required this.gasolinaRepository,
     required this.scannerRepository,
     required this.apiConfig,
     required this.apiClient,
@@ -72,6 +84,8 @@ class AppServices {
   final BiometricAuthService biometricAuthService;
   final AuthRepository authRepository;
   final PackageTrackingRepository packageTrackingRepository;
+  final BitacoraRepository bitacoraRepository;
+  final GasolinaRepository gasolinaRepository;
   final ScanRepository scannerRepository;
   final ApiConfig apiConfig;
   final ApiClient apiClient;
