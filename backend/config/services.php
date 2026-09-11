@@ -58,6 +58,13 @@ return [
         'verify_ssl' => (bool) env('SIOP_GASOLINA_VERIFY_SSL', true),
     ],
 
+    'siop_mantenimientos' => [
+        'url' => env('SIOP_MANTENIMIENTO_URL', 'https://dev.correos.gob.bo:18100/api/mantenimientos'),
+        'token' => env('SIOP_MANTENIMIENTO_TOKEN'),
+        'timeout' => (int) env('SIOP_MANTENIMIENTO_TIMEOUT', 20),
+        'verify_ssl' => (bool) env('SIOP_MANTENIMIENTO_VERIFY_SSL', true),
+    ],
+
     'siop_login' => [
         'url' => env('SIOP_LOGIN_URL', 'https://dev.correos.gob.bo:18100/api/integraciones/siop/login'),
         'token' => env('SIOP_LOGIN_TOKEN'),

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Clasificacion\MobileScannerController;
 use App\Http\Controllers\Api\Gestion\MobileBitacoraController;
 use App\Http\Controllers\Api\Gestion\MobileCourierController;
 use App\Http\Controllers\Api\Gestion\MobileGasolinaController;
+use App\Http\Controllers\Api\Gestion\MobileMantenimientoController;
 use App\Http\Controllers\Api\Seguimiento\MobileTrackingController;
 use App\Http\Controllers\Api\Seguimiento\TrackingEventsController;
 use App\Http\Controllers\Api\Seguimiento\TrackingLookupController;
@@ -48,6 +49,9 @@ Route::prefix('mobile')->as('mobile.')->group(function (): void {
         Route::post('/bitacoras', [MobileBitacoraController::class, 'store'])->name('bitacoras.store');
         Route::get('/gasolinas', [MobileGasolinaController::class, 'index'])->name('gasolinas.index');
         Route::post('/gasolinas', [MobileGasolinaController::class, 'store'])->name('gasolinas.store');
+        Route::get('/mantenimientos', [MobileMantenimientoController::class, 'index'])->name('mantenimientos.index');
+        Route::get('/mantenimientos/opciones', [MobileMantenimientoController::class, 'options'])->name('mantenimientos.options');
+        Route::post('/mantenimientos', [MobileMantenimientoController::class, 'store'])->name('mantenimientos.store');
         Route::get('/couriers/lookup', [MobileCourierController::class, 'lookup'])->name('couriers.lookup');
         Route::get('/couriers/assignments/recent', [MobileCourierController::class, 'regionalRecentAssignments'])
             ->name('couriers.assignments.regional-recent');

@@ -1,31 +1,25 @@
 import 'package:flutter/material.dart';
 
-import 'package:scan_agbc/funcionalidades/bitacoras/dominio/repositorios/bitacora_repository.dart';
-import 'package:scan_agbc/funcionalidades/gasolina/dominio/modelos/gasolina_result.dart';
-import 'package:scan_agbc/funcionalidades/gasolina/dominio/repositorios/gasolina_repository.dart';
-import 'package:scan_agbc/funcionalidades/gasolina/presentacion/paginas/nueva_gasolina_page.dart';
+import 'package:scan_agbc/funcionalidades/mantenimiento/dominio/modelos/mantenimiento_models.dart';
+import 'package:scan_agbc/funcionalidades/mantenimiento/dominio/repositorios/mantenimiento_repository.dart';
+import 'package:scan_agbc/funcionalidades/mantenimiento/presentacion/paginas/nuevo_mantenimiento_page.dart';
 import 'package:scan_agbc/nucleo/componentes/app_page_scaffold.dart';
 import 'package:scan_agbc/nucleo/componentes/app_success_dialog.dart';
 import 'package:scan_agbc/nucleo/tema/app_theme.dart';
 import 'package:scan_agbc/nucleo/utilidades/bolivia_date_time_formatter.dart';
 
-class GasolinasPage extends StatefulWidget {
-  const GasolinasPage({
-    super.key,
-    required this.repository,
-    required this.bitacoraRepository,
-  });
+class MantenimientosPage extends StatefulWidget {
+  const MantenimientosPage({super.key, required this.repository});
 
-  final GasolinaRepository repository;
-  final BitacoraRepository bitacoraRepository;
+  final MantenimientoRepository repository;
 
   @override
-  State<GasolinasPage> createState() => _GasolinasPageState();
+  State<MantenimientosPage> createState() => _MantenimientosPageState();
 }
 
-class _GasolinasPageState extends State<GasolinasPage> {
+class _MantenimientosPageState extends State<MantenimientosPage> {
   static const _perPage = 20;
-  late Future<GasolinaResult> _future;
+  late Future<MantenimientoResult> _future;
   int _page = 1;
 
   @override
@@ -34,7 +28,7 @@ class _GasolinasPageState extends State<GasolinasPage> {
     _future = _load();
   }
 
-  Future<GasolinaResult> _load() =>
+  Future<MantenimientoResult> _load() =>
       widget.repository.findAll(page: _page, perPage: _perPage);
 
   Future<void> _refresh() async {
@@ -51,10 +45,7 @@ class _GasolinasPageState extends State<GasolinasPage> {
   Future<void> _openCreate() async {
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => NuevaGasolinaPage(
-          repository: widget.repository,
-          bitacoraRepository: widget.bitacoraRepository,
-        ),
+        builder: (_) => NuevoMantenimientoPage(repository: widget.repository),
       ),
     );
     if (created != true || !mounted) return;
@@ -64,22 +55,22 @@ class _GasolinasPageState extends State<GasolinasPage> {
     });
     await showAppSuccessDialog(
       context,
-      title: '¡Registro exitoso!',
-      message: 'El registro de gasolina fue creado correctamente.',
+      title: '¡Solicitud exitosa!',
+      message: 'La solicitud de mantenimiento fue creada correctamente.',
     );
   }
 
   @override
   Widget build(BuildContext context) => AppPageScaffold(
-    title: 'Gasolina',
+    title: 'Solicitar mantenimiento',
     appBar: AppBar(
       title: const Text(
-        'Gasolina',
+        'Mantenimientos',
         style: TextStyle(fontWeight: FontWeight.w800),
       ),
       actions: [
         IconButton(
-          tooltip: 'Nuevo registro',
+          tooltip: 'Nueva solicitud',
           onPressed: _openCreate,
           icon: const Icon(Icons.add_circle_outline_rounded),
         ),
@@ -93,10 +84,10 @@ class _GasolinasPageState extends State<GasolinasPage> {
     floatingActionButton: FloatingActionButton.extended(
       onPressed: _openCreate,
       icon: const Icon(Icons.add_rounded),
-      label: const Text('Registrar gasolina'),
+      label: const Text('Solicitar'),
     ),
     bodyPadding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-    body: FutureBuilder<GasolinaResult>(
+    body: FutureBuilder<MantenimientoResult>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -105,7 +96,6 @@ class _GasolinasPageState extends State<GasolinasPage> {
         if (snapshot.hasError) {
           return _ErrorState(onRetry: _refresh);
         }
-
         final result = snapshot.data!;
         return RefreshIndicator(
           onRefresh: _refresh,
@@ -116,17 +106,17 @@ class _GasolinasPageState extends State<GasolinasPage> {
               const SizedBox(height: 12),
               if (result.entries.isEmpty)
                 const Padding(
-                  padding: EdgeInsets.only(top: 110),
+                  padding: EdgeInsets.only(top: 100),
                   child: Column(
                     children: [
                       Icon(
-                        Icons.local_gas_station_outlined,
+                        Icons.build_circle_outlined,
                         size: 64,
                         color: AppTheme.blue,
                       ),
-                      SizedBox(height: 16),
+                      SizedBox(height: 14),
                       Text(
-                        'No hay registros de gasolina.',
+                        'No hay solicitudes de mantenimiento.',
                         style: TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ],
@@ -136,32 +126,29 @@ class _GasolinasPageState extends State<GasolinasPage> {
                 ...result.entries.map(
                   (entry) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: _GasolinaCard(entry: entry),
+                    child: _MantenimientoCard(entry: entry),
                   ),
                 ),
               if (result.lastPage > 1)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    OutlinedButton.icon(
+                    OutlinedButton(
                       onPressed: result.currentPage > 1
                           ? () => _goTo(result.currentPage - 1)
                           : null,
-                      icon: const Icon(Icons.chevron_left_rounded),
-                      label: const Text('Anterior'),
+                      child: const Text('Anterior'),
                     ),
                     Text('${result.currentPage} / ${result.lastPage}'),
-                    OutlinedButton.icon(
+                    OutlinedButton(
                       onPressed: result.currentPage < result.lastPage
                           ? () => _goTo(result.currentPage + 1)
                           : null,
-                      iconAlignment: IconAlignment.end,
-                      icon: const Icon(Icons.chevron_right_rounded),
-                      label: const Text('Siguiente'),
+                      child: const Text('Siguiente'),
                     ),
                   ],
                 ),
-              const SizedBox(height: 76),
+              const SizedBox(height: 78),
             ],
           ),
         );
@@ -172,7 +159,7 @@ class _GasolinasPageState extends State<GasolinasPage> {
 
 class _Summary extends StatelessWidget {
   const _Summary({required this.result});
-  final GasolinaResult result;
+  final MantenimientoResult result;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -182,7 +169,7 @@ class _Summary extends StatelessWidget {
       children: [
         const CircleAvatar(
           backgroundColor: AppTheme.blue,
-          child: Icon(Icons.local_gas_station_rounded, color: Colors.white),
+          child: Icon(Icons.build_rounded, color: Colors.white),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -190,7 +177,7 @@ class _Summary extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${result.total} registros',
+                '${result.total} solicitudes',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               Text('Página ${result.currentPage} de ${result.lastPage}'),
@@ -202,9 +189,48 @@ class _Summary extends StatelessWidget {
   );
 }
 
-class _GasolinaCard extends StatelessWidget {
-  const _GasolinaCard({required this.entry});
-  final GasolinaEntry entry;
+class _MantenimientoCard extends StatelessWidget {
+  const _MantenimientoCard({required this.entry});
+  final MantenimientoEntry entry;
+
+  Future<void> _showDetails(BuildContext context) => showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(
+        entry.maintenanceType.isEmpty
+            ? 'Mantenimiento #${entry.id}'
+            : entry.maintenanceType,
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _Detail(Icons.tag_rounded, 'Solicitud #${entry.id}'),
+            _Detail(Icons.directions_car_rounded, entry.vehiclePlate),
+            _Detail(Icons.info_outline_rounded, entry.vehicleName),
+            _Detail(
+              Icons.event_rounded,
+              BoliviaDateTimeFormatter.format(entry.scheduledAt),
+            ),
+            _Detail(Icons.flag_rounded, entry.status),
+            if (entry.description.isNotEmpty)
+              _Detail(Icons.notes_rounded, entry.description),
+            if (entry.createdAt != null)
+              _Detail(
+                Icons.schedule_rounded,
+                'Creado: ${BoliviaDateTimeFormatter.format(entry.createdAt)}',
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cerrar'),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Container(
@@ -221,9 +247,9 @@ class _GasolinaCard extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                entry.stationName.isEmpty
-                    ? 'Carga de combustible'
-                    : entry.stationName,
+                entry.maintenanceType.isEmpty
+                    ? 'Mantenimiento #${entry.id}'
+                    : entry.maintenanceType,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -234,30 +260,20 @@ class _GasolinaCard extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: 10),
-        _Detail(
-          Icons.calendar_today_rounded,
-          BoliviaDateTimeFormatter.format(entry.dateTime),
-        ),
-        _Detail(Icons.receipt_rounded, 'Factura ${entry.invoiceNumber}'),
-        _Detail(Icons.person_rounded, entry.driverName),
+        const SizedBox(height: 8),
         _Detail(Icons.directions_car_rounded, entry.vehiclePlate),
         _Detail(
-          Icons.water_drop_rounded,
-          '${entry.liters?.toStringAsFixed(2) ?? '—'} L · ${entry.unitPrice?.toStringAsFixed(2) ?? '—'} Bs/L',
+          Icons.event_rounded,
+          BoliviaDateTimeFormatter.format(entry.scheduledAt),
         ),
-        const Divider(height: 22),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Monto total'),
-            Text(
-              '${entry.totalAmount?.toStringAsFixed(2) ?? '—'} Bs',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(color: AppTheme.blue),
-            ),
-          ],
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerRight,
+          child: OutlinedButton.icon(
+            onPressed: () => _showDetails(context),
+            icon: const Icon(Icons.visibility_rounded),
+            label: const Text('Ver'),
+          ),
         ),
       ],
     ),
@@ -271,8 +287,9 @@ class _Detail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 7),
+    padding: const EdgeInsets.only(bottom: 8),
     child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 18, color: AppTheme.blue),
         const SizedBox(width: 8),
@@ -293,7 +310,7 @@ class _ErrorState extends StatelessWidget {
       children: [
         const Icon(Icons.cloud_off_rounded, size: 60, color: AppTheme.errorRed),
         const SizedBox(height: 14),
-        const Text('No pudimos cargar los registros de gasolina.'),
+        const Text('No pudimos cargar los mantenimientos.'),
         const SizedBox(height: 14),
         FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
       ],

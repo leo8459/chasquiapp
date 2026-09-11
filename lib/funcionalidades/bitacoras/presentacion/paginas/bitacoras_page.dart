@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:scan_agbc/funcionalidades/bitacoras/dominio/modelos/bitacora_result.dart';
 import 'package:scan_agbc/funcionalidades/bitacoras/dominio/repositorios/bitacora_repository.dart';
 import 'package:scan_agbc/funcionalidades/bitacoras/presentacion/paginas/nueva_bitacora_page.dart';
-import 'package:scan_agbc/nucleo/componentes/app_feedback_banner.dart';
 import 'package:scan_agbc/nucleo/componentes/app_page_scaffold.dart';
+import 'package:scan_agbc/nucleo/componentes/app_success_dialog.dart';
 import 'package:scan_agbc/nucleo/tema/app_theme.dart';
 import 'package:scan_agbc/nucleo/utilidades/bolivia_date_time_formatter.dart';
 
@@ -51,13 +51,14 @@ class _BitacorasPageState extends State<BitacorasPage> {
       ),
     );
     if (created != true || !mounted) return;
-    _page = 1;
-    await _refresh();
-    if (!mounted) return;
-    showAppFeedbackBanner(
+    setState(() {
+      _page = 1;
+      _resultFuture = _load();
+    });
+    await showAppSuccessDialog(
       context,
-      'Bitácora creada correctamente.',
-      tone: AppFeedbackTone.success,
+      title: '¡Registro exitoso!',
+      message: 'La bitácora fue creada correctamente.',
     );
   }
 

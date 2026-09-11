@@ -13,6 +13,7 @@ import 'package:scan_agbc/funcionalidades/autenticacion/dominio/utilidades/user_
 import 'package:scan_agbc/funcionalidades/autenticacion/presentacion/paginas/login_page.dart';
 import 'package:scan_agbc/funcionalidades/bitacoras/presentacion/paginas/bitacoras_page.dart';
 import 'package:scan_agbc/funcionalidades/gasolina/presentacion/paginas/gasolinas_page.dart';
+import 'package:scan_agbc/funcionalidades/mantenimiento/presentacion/paginas/mantenimientos_page.dart';
 import 'package:scan_agbc/funcionalidades/inicio/presentacion/componentes/app_sidebar.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/assigned_package_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/available_couriers_result.dart';
@@ -352,6 +353,17 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _openMantenimientos() async {
+    Navigator.of(context).pop();
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MantenimientosPage(
+          repository: widget.services.mantenimientoRepository,
+        ),
+      ),
+    );
+  }
+
   List<AppDrawerActionItem> _buildDrawerActions() {
     return <AppDrawerActionItem>[
       AppDrawerActionItem(
@@ -363,6 +375,11 @@ class _HomePageState extends State<HomePage> {
         icon: Icons.local_gas_station_rounded,
         title: 'Gasolina',
         onTap: _openGasolina,
+      ),
+      AppDrawerActionItem(
+        icon: Icons.build_circle_outlined,
+        title: 'Solicitar mantenimiento',
+        onTap: _openMantenimientos,
       ),
     ];
   }

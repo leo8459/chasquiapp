@@ -12,6 +12,8 @@ import 'package:scan_agbc/funcionalidades/bitacoras/datos/repositorios/api_bitac
 import 'package:scan_agbc/funcionalidades/bitacoras/dominio/repositorios/bitacora_repository.dart';
 import 'package:scan_agbc/funcionalidades/gasolina/datos/repositorios/api_gasolina_repository.dart';
 import 'package:scan_agbc/funcionalidades/gasolina/dominio/repositorios/gasolina_repository.dart';
+import 'package:scan_agbc/funcionalidades/mantenimiento/datos/repositorios/api_mantenimiento_repository.dart';
+import 'package:scan_agbc/funcionalidades/mantenimiento/dominio/repositorios/mantenimiento_repository.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/datos/repositorios/api_package_tracking_repository.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/repositorios/package_tracking_repository.dart';
 import 'package:scan_agbc/funcionalidades/clasificacion/datos/repositorios/api_scanner_repository.dart';
@@ -27,6 +29,7 @@ class AppServices {
     PackageTrackingRepository? packageTrackingRepository,
     BitacoraRepository? bitacoraRepository,
     GasolinaRepository? gasolinaRepository,
+    MantenimientoRepository? mantenimientoRepository,
     ScanRepository? scannerRepository,
   }) {
     final resolvedSessionSecurityService =
@@ -60,6 +63,9 @@ class AppServices {
           bitacoraRepository ?? ApiBitacoraRepository(resolvedApiClient),
       gasolinaRepository:
           gasolinaRepository ?? ApiGasolinaRepository(resolvedApiClient),
+      mantenimientoRepository:
+          mantenimientoRepository ??
+          ApiMantenimientoRepository(resolvedApiClient),
       scannerRepository: resolvedScannerRepository,
       apiConfig: resolvedApiConfig,
       apiClient: resolvedApiClient,
@@ -74,6 +80,7 @@ class AppServices {
     required this.packageTrackingRepository,
     required this.bitacoraRepository,
     required this.gasolinaRepository,
+    required this.mantenimientoRepository,
     required this.scannerRepository,
     required this.apiConfig,
     required this.apiClient,
@@ -86,6 +93,7 @@ class AppServices {
   final PackageTrackingRepository packageTrackingRepository;
   final BitacoraRepository bitacoraRepository;
   final GasolinaRepository gasolinaRepository;
+  final MantenimientoRepository mantenimientoRepository;
   final ScanRepository scannerRepository;
   final ApiConfig apiConfig;
   final ApiClient apiClient;
