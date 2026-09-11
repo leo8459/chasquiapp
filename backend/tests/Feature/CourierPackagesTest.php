@@ -302,6 +302,48 @@ class CourierPackagesTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_pickup_accepts_a_weight_of_700_kilograms(): void
+    {
+        Http::fake([
+            'https://siop.example.test/pickup-contract' => Http::response([
+                'message' => 'Paquete recogido correctamente.',
+                'actualizados' => 1,
+                'codigos' => ['C0001A89843BO'],
+                'no_procesados' => [],
+            ]),
+        ]);
+
+        $this->withToken($this->issueMobileToken())
+            ->postJson('/api/mobile/courier/pickup-contract-packages', [
+                'shipments' => [
+                    ['code' => 'C0001A89843BO', 'weight' => 700],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('picked_up_count', 1);
+
+        Http::assertSent(fn (Request $request): bool =>
+            $request->url() === 'https://siop.example.test/pickup-contract'
+            && $request['envios'] === [
+                ['codigo' => 'C0001A89843BO', 'peso' => 700.0],
+            ]);
+    }
+
+    public function test_pickup_rejects_a_weight_above_700_kilograms(): void
+    {
+        Http::fake();
+
+        $this->withToken($this->issueMobileToken())
+            ->postJson('/api/mobile/courier/pickup-contract-packages', [
+                'shipments' => [
+                    ['code' => 'C0001A89843BO', 'weight' => 700.001],
+                ],
+            ])
+            ->assertUnprocessable();
+
+        Http::assertNothingSent();
+    }
+
     public function test_assignment_is_successful_when_siop_fails_after_committing_it(): void
     {
         $assignmentAttempted = false;

@@ -266,8 +266,8 @@ class _PickupWeightDialogState extends State<_PickupWeightDialog> {
   String? _validateWeight(String? rawValue) {
     final value = _parseWeight(rawValue ?? '');
     if (value == null) return 'Ingresa un peso numérico.';
-    if (value < 0.001 || value > 150) {
-      return 'Debe estar entre 0,001 y 150,000 kg.';
+    if (value < 0.001 || value > 700) {
+      return 'Debe estar entre 0,001 y 700,000 kg.';
     }
     return null;
   }
@@ -299,7 +299,7 @@ class _PickupWeightDialogState extends State<_PickupWeightDialog> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Peso permitido: 0,001 a 150,000 kg.',
+                  'Peso permitido: 0,001 a 700,000 kg.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 16),

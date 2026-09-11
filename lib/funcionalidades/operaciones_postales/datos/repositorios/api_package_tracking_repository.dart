@@ -306,9 +306,9 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
       throw StateError('Selecciona al menos un paquete válido.');
     }
     if (normalizedShipments.values.any(
-      (weight) => weight < 0.001 || weight > 150,
+      (weight) => weight < 0.001 || weight > 700,
     )) {
-      throw StateError('El peso debe estar entre 0,001 y 150,000 kg.');
+      throw StateError('El peso debe estar entre 0,001 y 700,000 kg.');
     }
 
     try {

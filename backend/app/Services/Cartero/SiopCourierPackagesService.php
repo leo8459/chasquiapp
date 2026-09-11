@@ -170,7 +170,7 @@ class SiopCourierPackagesService
 
             $code = $this->normalizeCode((string) ($rawShipment['code'] ?? ''));
             $weight = round((float) ($rawShipment['weight'] ?? 0), 3);
-            if ($code !== '' && $weight >= 0.001 && $weight <= 150) {
+            if ($code !== '' && $weight >= 0.001 && $weight <= 700) {
                 $shipmentsByCode[$code] = $weight;
             }
         }

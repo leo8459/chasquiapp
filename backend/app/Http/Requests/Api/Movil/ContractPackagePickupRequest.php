@@ -9,7 +9,7 @@ class ContractPackagePickupRequest extends BaseMobileApiRequest
         return [
             'shipments' => ['required', 'array', 'min:1', 'max:100'],
             'shipments.*.code' => ['required', 'string', 'max:80', 'distinct:ignore_case'],
-            'shipments.*.weight' => ['required', 'numeric', 'min:0.001', 'max:150'],
+            'shipments.*.weight' => ['required', 'numeric', 'min:0.001', 'max:700'],
         ];
     }
 
@@ -38,6 +38,6 @@ class ContractPackagePickupRequest extends BaseMobileApiRequest
 
     protected function validationMessage(): string
     {
-        return 'Cada paquete debe tener un codigo valido y un peso entre 0,001 y 150,000 kg.';
+        return 'Cada paquete debe tener un codigo valido y un peso entre 0,001 y 700,000 kg.';
     }
 }
