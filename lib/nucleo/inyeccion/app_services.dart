@@ -4,6 +4,7 @@ import 'package:scan_agbc/nucleo/configuracion/api_config.dart';
 import 'package:scan_agbc/nucleo/red/api_client.dart';
 import 'package:scan_agbc/nucleo/servicios/biometric_auth_service.dart';
 import 'package:scan_agbc/nucleo/servicios/courier_notification_service.dart';
+import 'package:scan_agbc/nucleo/servicios/courier_location_heartbeat_service.dart';
 import 'package:scan_agbc/nucleo/servicios/session_security_service.dart';
 import 'package:scan_agbc/funcionalidades/autenticacion/datos/repositorios/api_auth_repository.dart';
 import 'package:scan_agbc/funcionalidades/autenticacion/dominio/modelos/authenticated_user.dart';
@@ -31,6 +32,7 @@ class AppServices {
     GasolinaRepository? gasolinaRepository,
     MantenimientoRepository? mantenimientoRepository,
     ScanRepository? scannerRepository,
+    CourierLocationHeartbeatService? courierLocationHeartbeatService,
   }) {
     final resolvedSessionSecurityService =
         sessionSecurityService ?? SessionSecurityService();
@@ -39,6 +41,9 @@ class AppServices {
     final resolvedCourierNotificationService = CourierNotificationService(
       resolvedSessionSecurityService,
     );
+    final resolvedCourierLocationHeartbeatService =
+        courierLocationHeartbeatService ??
+        CourierLocationHeartbeatService(resolvedApiClient);
     final resolvedPackageTrackingRepository =
         packageTrackingRepository ??
         ApiPackageTrackingRepository(resolvedApiClient);
@@ -70,6 +75,7 @@ class AppServices {
       apiConfig: resolvedApiConfig,
       apiClient: resolvedApiClient,
       courierNotificationService: resolvedCourierNotificationService,
+      courierLocationHeartbeatService: resolvedCourierLocationHeartbeatService,
     );
   }
 
@@ -85,6 +91,7 @@ class AppServices {
     required this.apiConfig,
     required this.apiClient,
     required this.courierNotificationService,
+    required this.courierLocationHeartbeatService,
   });
 
   final SessionSecurityService sessionSecurityService;
@@ -98,11 +105,16 @@ class AppServices {
   final ApiConfig apiConfig;
   final ApiClient apiClient;
   final CourierNotificationService courierNotificationService;
+  final CourierLocationHeartbeatService courierLocationHeartbeatService;
 
   Future<void> activateCourierNotifications(AuthenticatedUser user) async {
     final token = apiClient.currentAccessToken?.trim() ?? '';
     if (token.isEmpty) return;
     await courierNotificationService.enable(token: token, userId: user.id);
+  }
+
+  Future<void> activateCourierLocationTracking() {
+    return courierLocationHeartbeatService.enable();
   }
 
   Future<void> persistRememberedAuthState(AuthenticatedUser user) async {
@@ -124,7 +136,10 @@ class AppServices {
   }
 
   Future<void> clearActiveSession() async {
-    await courierNotificationService.disable();
+    await Future.wait([
+      courierNotificationService.disable(),
+      courierLocationHeartbeatService.disable(),
+    ]);
     apiClient.setAccessToken(null);
     await sessionSecurityService.clearAuthenticatedState();
     await _clearOperationalCaches(

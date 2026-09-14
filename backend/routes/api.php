@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Autenticacion\MobileAuthController;
 use App\Http\Controllers\Api\Cartero\MobileAssignmentDeliveryController;
 use App\Http\Controllers\Api\Cartero\MobileCarteroController;
+use App\Http\Controllers\Api\Cartero\SelfCourierLocationController;
 use App\Http\Controllers\Api\Cartero\SelfCourierNotificationController;
 use App\Http\Controllers\Api\Cartero\SelfPackageAssignmentController;
 use App\Http\Controllers\Api\Clasificacion\MobileScannerController;
@@ -62,6 +63,10 @@ Route::prefix('mobile')->as('mobile.')->group(function (): void {
             ->name('courier.assigned-packages');
         Route::get('/courier/pending-notifications', SelfCourierNotificationController::class)
             ->name('courier.pending-notifications');
+        Route::get('/courier/location/heartbeat', [SelfCourierLocationController::class, 'index'])
+            ->name('courier.location.index');
+        Route::post('/courier/location/heartbeat', [SelfCourierLocationController::class, 'store'])
+            ->name('courier.location.store');
         Route::post('/courier/assign-packages', [SelfPackageAssignmentController::class, 'store'])
             ->name('courier.assign-packages');
         Route::post('/courier/pickup-contract-packages', [SelfPackageAssignmentController::class, 'pickup'])

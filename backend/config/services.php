@@ -93,4 +93,11 @@ return [
         'verify_ssl' => (bool) env('SIOP_COURIER_NOTIFICATIONS_VERIFY_SSL', true),
     ],
 
+    'siop_courier_location' => [
+        'url' => env('SIOP_COURIER_LOCATION_URL', 'https://dev.correos.gob.bo:18100/api/chasqui/location/heartbeat'),
+        'token' => env('SIOP_COURIER_LOCATION_TOKEN'),
+        'timeout' => (int) env('SIOP_COURIER_LOCATION_TIMEOUT', 12),
+        'verify_ssl' => (bool) env('SIOP_COURIER_LOCATION_VERIFY_SSL', true),
+    ],
+
 ];
