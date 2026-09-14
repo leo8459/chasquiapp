@@ -1,9 +1,10 @@
 class ApiConfig {
   const ApiConfig({required this.baseUrl});
 
-  // Dirección de la laptop dentro de la red Wi-Fi. En Android, 127.0.0.1
-  // apunta al teléfono y solo funciona mediante `adb reverse` por USB.
-  static const defaultBaseUrl = 'http://10.10.100.19:8001/api';
+  // API pública de producción. No usar una IP privada como valor incluido en
+  // el APK: el teléfono no puede alcanzarla fuera de esa red Wi-Fi.
+  static const defaultBaseUrl =
+      'https://dev.correos.gob.bo:18100/chasquiapp/api';
 
   final String baseUrl;
 

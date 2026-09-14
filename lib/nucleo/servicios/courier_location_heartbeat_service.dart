@@ -39,7 +39,8 @@ class CourierLocationHeartbeatService {
     }
 
     _enabled = true;
-    final locationSettings = defaultTargetPlatform == TargetPlatform.android
+    final LocationSettings locationSettings =
+        defaultTargetPlatform == TargetPlatform.android
         ? AndroidSettings(
             accuracy: LocationAccuracy.high,
             distanceFilter: 0,
@@ -58,6 +59,20 @@ class CourierLocationHeartbeatService {
             distanceFilter: 0,
           );
 
+    // No esperar a que el repartidor se desplace: al iniciar sesión SIOP debe
+    // recibir una ubicación de inmediato. El stream se mantiene después para
+    // los heartbeats periódicos y las actualizaciones por movimiento.
+    try {
+      final currentPosition = await Geolocator.getCurrentPosition(
+        locationSettings: locationSettings,
+        timeLimit: const Duration(seconds: 20),
+      );
+      await _sendPosition(currentPosition);
+    } catch (error) {
+      debugPrint('Rastreo GPS: no se pudo obtener la ubicacion inicial: $error');
+    }
+
+    if (!_enabled) return;
     _positionSubscription =
         Geolocator.getPositionStream(locationSettings: locationSettings).listen(
           (position) => unawaited(_sendPosition(position)),
