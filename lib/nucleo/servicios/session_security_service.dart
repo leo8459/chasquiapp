@@ -20,6 +20,8 @@ class SessionSecurityService {
       'background_notification_access_token';
   static const _backgroundNotificationUserIdKey =
       'background_notification_user_id';
+  static const _backgroundLocationTokenKey = 'background_location_access_token';
+  static const _backgroundLocationUserIdKey = 'background_location_user_id';
   static const _packageTrackingAssignmentsCachePrefix =
       'package_tracking_assignments_cache_v1';
   static const _packageTrackingInventoryCachePrefix =
@@ -69,6 +71,8 @@ class SessionSecurityService {
       _storage.delete(key: _authenticatedUserPayloadKey),
       _storage.delete(key: _backgroundNotificationTokenKey),
       _storage.delete(key: _backgroundNotificationUserIdKey),
+      _storage.delete(key: _backgroundLocationTokenKey),
+      _storage.delete(key: _backgroundLocationUserIdKey),
       clearCachedOperationalData(),
     ]);
 
@@ -231,6 +235,38 @@ class SessionSecurityService {
     await Future.wait([
       _storage.delete(key: _backgroundNotificationTokenKey),
       _storage.delete(key: _backgroundNotificationUserIdKey),
+    ]);
+  }
+
+  Future<void> saveBackgroundLocationSession({
+    required String token,
+    required int userId,
+  }) async {
+    final normalized = token.trim();
+    if (normalized.isEmpty || userId <= 0) return;
+    await Future.wait([
+      _storage.write(key: _backgroundLocationTokenKey, value: normalized),
+      _storage.write(
+        key: _backgroundLocationUserIdKey,
+        value: userId.toString(),
+      ),
+    ]);
+  }
+
+  Future<String?> readBackgroundLocationToken() {
+    return _storage.read(key: _backgroundLocationTokenKey);
+  }
+
+  Future<int?> readBackgroundLocationUserId() async {
+    return int.tryParse(
+      await _storage.read(key: _backgroundLocationUserIdKey) ?? '',
+    );
+  }
+
+  Future<void> clearBackgroundLocationSession() async {
+    await Future.wait([
+      _storage.delete(key: _backgroundLocationTokenKey),
+      _storage.delete(key: _backgroundLocationUserIdKey),
     ]);
   }
 

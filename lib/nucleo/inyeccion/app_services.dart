@@ -43,7 +43,10 @@ class AppServices {
     );
     final resolvedCourierLocationHeartbeatService =
         courierLocationHeartbeatService ??
-        CourierLocationHeartbeatService(resolvedApiClient);
+        CourierLocationHeartbeatService(
+          resolvedApiClient,
+          resolvedSessionSecurityService,
+        );
     final resolvedPackageTrackingRepository =
         packageTrackingRepository ??
         ApiPackageTrackingRepository(resolvedApiClient);
@@ -113,8 +116,13 @@ class AppServices {
     await courierNotificationService.enable(token: token, userId: user.id);
   }
 
-  Future<void> activateCourierLocationTracking() {
-    return courierLocationHeartbeatService.enable();
+  Future<void> activateCourierLocationTracking(AuthenticatedUser user) {
+    final token = apiClient.currentAccessToken?.trim() ?? '';
+    if (token.isEmpty) return Future<void>.value();
+    return courierLocationHeartbeatService.enable(
+      token: token,
+      userId: user.id,
+    );
   }
 
   Future<void> persistRememberedAuthState(AuthenticatedUser user) async {

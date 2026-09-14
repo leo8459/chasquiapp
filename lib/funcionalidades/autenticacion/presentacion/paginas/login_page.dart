@@ -266,7 +266,7 @@ class _LoginPageState extends State<LoginPage> {
     final permissions = UserRolePermissions.fromRoles(user.roles);
     if (permissions.hasCourierRole) {
       await widget.services.activateCourierNotifications(user);
-      await widget.services.activateCourierLocationTracking();
+      await widget.services.activateCourierLocationTracking(user);
     }
     if (!mounted) return;
     final area = _resolveArea(user);
