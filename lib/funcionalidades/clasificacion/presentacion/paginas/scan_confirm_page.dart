@@ -818,7 +818,7 @@ class _ScanConfirmPageState extends State<ScanConfirmPage>
                 controller: _scrollController,
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.manual,
-                scrollCacheExtent: const ScrollCacheExtent.pixels(120),
+                cacheExtent: 120,
                 slivers: [
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(16, 14, 16, 240),
