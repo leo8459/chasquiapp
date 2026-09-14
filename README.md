@@ -99,19 +99,27 @@ flutter pub get
 Para teléfono físico en la misma red Wi-Fi:
 
 ```powershell
-flutter run -d 21121119SG --dart-define=API_BASE_URL=http://IP_DE_TU_PC:8001/api
+Copy-Item .env.example .env
+notepad .env
+flutter run -d 21121119SG --dart-define-from-file=.env
 ```
 
 Ejemplo si la IP de tu PC fuera `192.168.1.50`:
 
 ```powershell
-flutter run -d 21121119SG --dart-define=API_BASE_URL=http://192.168.1.50:8001/api
+# .env
+API_BASE_URL=http://192.168.1.50:8001/api
+
+flutter run -d 21121119SG --dart-define-from-file=.env
 ```
 
 Para emulador Android:
 
 ```powershell
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8001/api
+# .env
+API_BASE_URL=http://10.0.2.2:8001/api
+
+flutter run --dart-define-from-file=.env
 ```
 
 Para obtener la IP de tu PC:
@@ -249,8 +257,11 @@ REDIS_PASSWORD=null
 ## APK release
 
 ```powershell
-flutter build apk --release --split-per-abi --dart-define=API_BASE_URL=https://tu-dominio.com/api
+flutter build apk --release --split-per-abi --dart-define-from-file=.env
 ```
+
+La URL queda incorporada al APK durante la compilación. Para publicar en otro
+servidor, actualiza `API_BASE_URL` en `.env` y vuelve a compilar el APK.
 
 ## Errores comunes
 

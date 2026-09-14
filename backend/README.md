@@ -45,6 +45,11 @@ SIOP_LOGIN_TIMEOUT=15
 SIOP_LOGIN_VERIFY_SSL=true
 ```
 
+Las demás integraciones SIOP siguen el mismo criterio: sus URL y tokens se
+configuran exclusivamente en `.env`; también puedes ajustar allí los timeouts
+y la verificación SSL. Revisa el bloque `SIOP_*` de `.env.example`: el código
+no contiene una URL alternativa.
+
 Para probar sin Docker y sin Redis:
 
 ```env

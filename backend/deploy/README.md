@@ -47,7 +47,8 @@ Se instalaron las dependencias de `composer.lock` con `--no-dev` y autoload
 optimizado. La compilación móvil usa Flutter 3.41.0 y Android SDK dentro de
 Docker, con una copia del código móvil en `/tmp/chasqui-android-build`, sin
 montar el backend ni su `.env`. El APK se compila con
-`--dart-define=API_BASE_URL=https://dev.correos.gob.bo:18100/chasquiapp/api`.
+`--dart-define-from-file=.env`, usando `API_BASE_URL` del archivo privado de
+configuración de Flutter ubicado en la raíz del proyecto.
 El proyecto utiliza su configuración de firma Android existente (`debug`
 para el modo release); la clave se conserva fuera del directorio público,
 en `build/android-signing`, para mantener la firma en futuras compilaciones.
@@ -58,8 +59,8 @@ Los tokens SIOP proporcionados están configurados en el archivo privado
 `backend/.env`. Se conserva la conexión PostgreSQL existente. La configuración
 publicada usa `APP_ENV=production`, `APP_DEBUG=false` y la URL del servidor.
 
-Las URL SIOP usan `https://dev.correos.gob.bo:18100`, conservando las rutas
-de cada operación del entorno proporcionado.
+Las URL SIOP se leen de las variables `SIOP_*_URL` de `backend/.env`. Para
+trasladar el sistema, deben actualizarse allí las URL de cada operación.
 Las URL `TRACKING_SQLSERVER_*` y `TRACKING_API_URL` conservan los destinos
 proporcionados. `APP_URL` usa la dirección pública HTTPS con `/chasquiapp`.
 Este backend no implementa una ruta
