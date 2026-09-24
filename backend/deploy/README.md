@@ -14,8 +14,13 @@ El APK se publica en `public/descargas/chasquiapp.apk` y queda excluido de Git.
 El teléfono muestra el nombre `ChasquiApp`, definido por el proyecto Android.
 
 La app consulta `GET /api/mobile/app-version` al iniciar y al volver al primer
-plano. Configura `MOBILE_MINIMUM_VERSION` y `MOBILE_DOWNLOAD_URL` en el `.env`
-del servidor. Para exigir una actualización, sube el APK nuevo conservando la
+plano. El enlace del APK se arma con `APP_URL` de cada instalación; configura
+ese valor con su dominio público y el prefijo `/chasquiapp`. Por ejemplo,
+`https://dev.correos.gob.bo:18100/chasquiapp` o
+`https://trackingbo.correos.gob.bo:8100/chasquiapp`. Deja
+`MOBILE_DOWNLOAD_URL` vacío para usar ese enlace automáticamente, o asígnalo
+solo si necesitas una dirección fija distinta. Para exigir una actualización,
+sube el APK nuevo conservando la
 misma clave de firma y aumenta `MOBILE_MINIMUM_VERSION` a la versión de
 `pubspec.yaml`; luego ejecuta `php artisan config:cache` y reinicia PHP-FPM.
 El bloqueo requiere conexión al servidor.
