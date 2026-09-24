@@ -65,6 +65,17 @@ class SiopLoginService
         $message = trim((string) $response->json('message'));
 
         if ($status === 401) {
+            $normalizedMessage = strtolower($message);
+            if (str_contains($normalizedMessage, 'token de acceso')
+                || str_contains($normalizedMessage, 'token invalido')
+                || str_contains($normalizedMessage, 'token inválido')) {
+                throw new MobileApiException(
+                    'El servicio de autenticacion SIOP requiere renovar su token de integracion.',
+                    503,
+                    'SIOP_LOGIN_TOKEN_INVALID',
+                );
+            }
+
             throw new MobileApiException(
                 'Usuario o contrasena incorrectos.',
                 401,

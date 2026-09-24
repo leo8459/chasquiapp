@@ -30,9 +30,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('mobile-login', function (Request $request): Limit {
-            $email = strtolower(trim((string) $request->input('email', '')));
+            $alias = strtolower(trim((string) $request->input(
+                'alias',
+                $request->input('email', ''),
+            )));
 
-            return Limit::perMinute(8)->by($request->ip().'|'.$email);
+            return Limit::perMinute(8)->by($request->ip().'|'.$alias);
         });
 
         RateLimiter::for('mobile-api', function (Request $request): Limit {
