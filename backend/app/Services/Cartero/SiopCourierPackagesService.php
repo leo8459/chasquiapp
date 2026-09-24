@@ -197,8 +197,8 @@ class SiopCourierPackagesService
                 ->withHeaders([
                     'X-API-Token' => $this->requiredConfig('contract_pickup_token'),
                 ])
-                ->connectTimeout(5)
-                ->timeout(max(1, (int) config('services.siop_courier_packages.timeout', 20)))
+                ->connectTimeout(30)
+                ->timeout(max(30, (int) config('services.siop_courier_packages.timeout', 30)))
                 ->withOptions([
                     'verify' => (bool) config('services.siop_courier_packages.verify_ssl', true),
                 ])
@@ -341,8 +341,8 @@ class SiopCourierPackagesService
             $response = Http::acceptJson()
                 ->withToken($siopToken)
                 ->withHeaders(['X-API-Token' => $integrationToken])
-                ->connectTimeout(5)
-                ->timeout(max(1, (int) config('services.siop_courier_packages.deliver_timeout', 60)))
+                ->connectTimeout(30)
+                ->timeout(max(30, (int) config('services.siop_courier_packages.deliver_timeout', 30)))
                 ->withOptions([
                     'verify' => (bool) config('services.siop_courier_packages.verify_ssl', true),
                 ])
@@ -395,8 +395,8 @@ class SiopCourierPackagesService
                 ->asJson()
                 ->withToken($siopToken)
                 ->withHeaders(['X-API-Token' => $integrationToken])
-                ->connectTimeout(5)
-                ->timeout(max(1, (int) config('services.siop_courier_packages.timeout', 20)))
+                ->connectTimeout(30)
+                ->timeout(max(30, (int) config('services.siop_courier_packages.timeout', 30)))
                 ->withOptions([
                     'verify' => (bool) config('services.siop_courier_packages.verify_ssl', true),
                 ]);

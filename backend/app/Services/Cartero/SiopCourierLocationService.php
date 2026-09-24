@@ -52,8 +52,8 @@ class SiopCourierLocationService
                 ->asJson()
                 ->withToken($bearerToken)
                 ->withHeaders(['X-API-Token' => $this->integrationToken()])
-                ->connectTimeout(5)
-                ->timeout(max(1, (int) config('services.siop_courier_location.timeout', 12)))
+                ->connectTimeout(30)
+                ->timeout(max(30, (int) config('services.siop_courier_location.timeout', 30)))
                 ->withOptions([
                     'verify' => (bool) config('services.siop_courier_location.verify_ssl', true),
                 ]);

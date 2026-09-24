@@ -25,7 +25,7 @@ class SiopBitacoraService
     {
         $url = trim((string) config('services.siop_bitacoras.url'));
         $token = trim((string) config('services.siop_bitacoras.create_token'));
-        $timeout = max(1, (int) config('services.siop_bitacoras.timeout', 20));
+        $timeout = max(30, (int) config('services.siop_bitacoras.timeout', 30));
         $verifySsl = (bool) config('services.siop_bitacoras.verify_ssl', true);
 
         if ($url === '' || $token === '') {
@@ -39,8 +39,8 @@ class SiopBitacoraService
         try {
             $response = Http::acceptJson()
                 ->withToken($token)
-                ->connectTimeout(min(5, $timeout))
-                ->timeout(max(30, $timeout))
+                ->connectTimeout(30)
+                ->timeout($timeout)
                 ->withOptions(['verify' => $verifySsl])
                 ->attach(
                     'odometro_photo',
@@ -95,7 +95,7 @@ class SiopBitacoraService
     {
         $url = trim((string) config('services.siop_bitacoras.url'));
         $token = trim((string) config('services.siop_bitacoras.read_token'));
-        $timeout = max(1, (int) config('services.siop_bitacoras.timeout', 20));
+        $timeout = max(30, (int) config('services.siop_bitacoras.timeout', 30));
         $verifySsl = (bool) config('services.siop_bitacoras.verify_ssl', true);
 
         if ($url === '' || $token === '') {
@@ -157,7 +157,7 @@ class SiopBitacoraService
     {
         $response = Http::acceptJson()
             ->withToken($token)
-            ->connectTimeout(min(5, $timeout))
+            ->connectTimeout(30)
             ->timeout($timeout)
             ->retry(1, 250)
             ->withOptions(['verify' => $verifySsl])
@@ -180,7 +180,7 @@ class SiopBitacoraService
     {
         $baseUrl = rtrim(trim((string) config('services.siop_bitacoras.url')), '/');
         $token = trim((string) config('services.siop_bitacoras.create_token'));
-        $timeout = max(1, (int) config('services.siop_bitacoras.timeout', 20));
+        $timeout = max(30, (int) config('services.siop_bitacoras.timeout', 30));
         $verifySsl = (bool) config('services.siop_bitacoras.verify_ssl', true);
 
         if ($baseUrl === '' || $token === '') {
@@ -236,7 +236,7 @@ class SiopBitacoraService
     {
         $response = Http::acceptJson()
             ->withToken($token)
-            ->connectTimeout(min(5, $timeout))
+            ->connectTimeout(30)
             ->timeout($timeout)
             ->retry(1, 250)
             ->withOptions(['verify' => $verifySsl])

@@ -26,8 +26,8 @@ class SiopLoginService
             $response = Http::acceptJson()
                 ->asJson()
                 ->withToken($token)
-                ->connectTimeout(10)
-                ->timeout(max(1, (int) config('services.siop_login.timeout', 15)))
+                ->connectTimeout(30)
+                ->timeout(max(30, (int) config('services.siop_login.timeout', 30)))
                 ->withOptions([
                     'verify' => (bool) config('services.siop_login.verify_ssl', true),
                 ])

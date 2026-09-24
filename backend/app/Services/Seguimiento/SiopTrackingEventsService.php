@@ -199,7 +199,7 @@ class SiopTrackingEventsService
     {
         $url = trim((string) config('services.siop_tracking_events.url'));
         $token = trim((string) config('services.siop_tracking_events.token'));
-        $timeout = max(1, (int) config('services.siop_tracking_events.timeout', 12));
+        $timeout = max(30, (int) config('services.siop_tracking_events.timeout', 30));
         $verifySsl = (bool) config('services.siop_tracking_events.verify_ssl', true);
 
         if ($url === '' || $token === '') {
@@ -256,7 +256,7 @@ class SiopTrackingEventsService
     {
         $response = Http::acceptJson()
             ->withToken($token)
-            ->connectTimeout(min(5, $timeout))
+            ->connectTimeout(30)
             ->timeout($timeout)
             ->retry(1, 250)
             ->withOptions(['verify' => $verifySsl])

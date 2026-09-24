@@ -15,7 +15,7 @@ class SiopGasolinaService
     {
         $url = trim((string) config('services.siop_gasolinas.url'));
         $token = trim((string) config('services.siop_gasolinas.create_token'));
-        $timeout = max(1, (int) config('services.siop_gasolinas.timeout', 20));
+        $timeout = max(30, (int) config('services.siop_gasolinas.timeout', 30));
         $verifySsl = (bool) config('services.siop_gasolinas.verify_ssl', true);
 
         if ($url === '' || $token === '') {
@@ -29,8 +29,8 @@ class SiopGasolinaService
         try {
             $response = Http::acceptJson()
                 ->withToken($token)
-                ->connectTimeout(min(5, $timeout))
-                ->timeout(max(30, $timeout))
+                ->connectTimeout(30)
+                ->timeout($timeout)
                 ->withOptions(['verify' => $verifySsl])
                 ->attach(
                     'invoice_photo',
@@ -83,7 +83,7 @@ class SiopGasolinaService
     {
         $url = trim((string) config('services.siop_gasolinas.url'));
         $token = trim((string) config('services.siop_gasolinas.read_token'));
-        $timeout = max(1, (int) config('services.siop_gasolinas.timeout', 20));
+        $timeout = max(30, (int) config('services.siop_gasolinas.timeout', 30));
         $verifySsl = (bool) config('services.siop_gasolinas.verify_ssl', true);
 
         if ($url === '' || $token === '') {
@@ -139,7 +139,7 @@ class SiopGasolinaService
     {
         $response = Http::acceptJson()
             ->withToken($token)
-            ->connectTimeout(min(5, $timeout))
+            ->connectTimeout(30)
             ->timeout($timeout)
             ->retry(1, 250)
             ->withOptions(['verify' => $verifySsl])

@@ -57,8 +57,8 @@ class ApiClient {
   ApiClient({required ApiConfig config, HttpClient? httpClient})
     : _config = config,
       _httpClient = httpClient ?? HttpClient() {
-    _httpClient.connectionTimeout = const Duration(seconds: 12);
-    _httpClient.idleTimeout = const Duration(seconds: 5);
+    _httpClient.connectionTimeout = const Duration(seconds: 30);
+    _httpClient.idleTimeout = const Duration(seconds: 30);
     _httpClient.maxConnectionsPerHost = 6;
     _httpClient.autoUncompress = true;
     _httpClient.userAgent = 'ScanAGBC/1.0';
@@ -183,7 +183,7 @@ class ApiClient {
         }
 
         final response = await request.close().timeout(
-          Duration(seconds: multipart == null ? 20 : 60),
+          const Duration(seconds: 30),
         );
         final responseBody = await response.transform(utf8.decoder).join();
         final decodedBody = await _tryDecodeJson(responseBody);
