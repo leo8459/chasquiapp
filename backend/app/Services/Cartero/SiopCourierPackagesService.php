@@ -214,7 +214,7 @@ class SiopCourierPackagesService
         }
 
         if (! $response->successful()) {
-            $this->throwForFailedResponse($response);
+            $this->throwForContractPickupFailedResponse($response);
         }
 
         $payload = $response->json();
@@ -461,6 +461,38 @@ class SiopCourierPackagesService
             'No pudimos completar la operacion de paquetes en SIOP.',
             503,
             'SIOP_COURIER_PACKAGES_FAILED',
+        );
+    }
+
+    private function throwForContractPickupFailedResponse(Response $response): never
+    {
+        $status = $response->status();
+        $message = trim((string) $response->json('message'));
+
+        Log::warning('SIOP rechazo la solicitud de recojo de paquetes de contrato.', [
+            'status' => $status,
+        ]);
+
+        if ($status === 401 || $status === 403) {
+            throw new MobileApiException(
+                "SIOP rechazo la credencial de recojo (HTTP {$status}). Verifica SIOP_CONTRACT_PICKUP_TOKEN en el servidor.",
+                502,
+                'SIOP_CONTRACT_PICKUP_AUTH_FAILED',
+            );
+        }
+
+        if ($status === 422) {
+            throw new MobileApiException(
+                $message !== '' ? $message : 'SIOP rechazo los datos de los paquetes. Revisa los codigos y pesos.',
+                422,
+                'SIOP_CONTRACT_PICKUP_VALIDATION_ERROR',
+            );
+        }
+
+        throw new MobileApiException(
+            "SIOP respondio HTTP {$status} al intentar recoger los paquetes.",
+            502,
+            'SIOP_CONTRACT_PICKUP_FAILED',
         );
     }
 
