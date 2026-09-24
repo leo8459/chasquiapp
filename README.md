@@ -1,4 +1,4 @@
-# ScanAGBC
+# ChasquiApp
 
 Aplicación móvil Flutter con backend Laravel para operaciones postales. Incluye autenticación por rol, seguimiento de paquetes, clasificación, gestión de asignaciones y registro de entregas/devoluciones por carteros.
 

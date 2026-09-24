@@ -11,7 +11,14 @@ conservan su comportamiento. Nginx se validó antes de recargarlo.
 
 Descarga Android: `https://dev.correos.gob.bo:18100/chasquiapp/descargas/`.
 El APK se publica en `public/descargas/chasquiapp.apk` y queda excluido de Git.
-El teléfono muestra el nombre `ScanAGBC`, definido por el proyecto Android.
+El teléfono muestra el nombre `ChasquiApp`, definido por el proyecto Android.
+
+La app consulta `GET /api/mobile/app-version` al iniciar y al volver al primer
+plano. Configura `MOBILE_MINIMUM_VERSION` y `MOBILE_DOWNLOAD_URL` en el `.env`
+del servidor. Para exigir una actualización, sube el APK nuevo conservando la
+misma clave de firma y aumenta `MOBILE_MINIMUM_VERSION` a la versión de
+`pubspec.yaml`; luego ejecuta `php artisan config:cache` y reinicia PHP-FPM.
+El bloqueo requiere conexión al servidor.
 
 El archivo privado `backend/.env` contiene la configuración de producción.
 PostgreSQL es el existente en `172.65.10.56:5432`; este despliegue no ejecuta

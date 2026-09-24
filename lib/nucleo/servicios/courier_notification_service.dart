@@ -85,7 +85,7 @@ class CourierNotificationService {
 
     await _notifications.show(
       id: 20260901,
-      title: 'Prueba de notificaciones ScanAGBC',
+      title: 'Prueba de notificaciones ChasquiApp',
       body: 'Las alertas de paquetes asignados están funcionando.',
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(

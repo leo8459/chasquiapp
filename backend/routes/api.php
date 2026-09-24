@@ -23,6 +23,13 @@ Route::get('/health', function () {
     ]);
 });
 
+Route::get('/mobile/app-version', function () {
+    return response()->json([
+        'minimum_version' => config('mobile.minimum_version'),
+        'download_url' => config('mobile.download_url'),
+    ]);
+})->middleware('throttle:mobile-public');
+
 Route::match(['GET', 'POST'], '/tracking/package', TrackingLookupController::class)
     ->middleware('throttle:mobile-public');
 Route::match(['GET', 'POST'], '/tracking/events', TrackingEventsController::class)

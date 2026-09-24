@@ -51,6 +51,8 @@ backend/.phpunit.cache/
 .env.*
 *.env
 *.env.*
+.envproduccion
+backend/.envproduccion
 backend/.env
 backend/.env.*
 !backend/.env.example

@@ -90,7 +90,7 @@ void courierLocationServiceEntryPoint(ServiceInstance service) async {
   if (service is AndroidServiceInstance) {
     await service.setForegroundNotificationInfo(
       title: 'Rastreo de reparto activo',
-      content: 'ScanAGBC comparte tu ubicacion durante el reparto.',
+      content: 'ChasquiApp comparte tu ubicacion durante el reparto.',
     );
   }
 
@@ -189,7 +189,7 @@ class CourierLocationHeartbeatService {
         notificationChannelId: _locationNotificationChannelId,
         initialNotificationTitle: 'Rastreo de reparto activo',
         initialNotificationContent:
-            'ScanAGBC esta preparando el rastreo de ubicacion.',
+            'ChasquiApp esta preparando el rastreo de ubicacion.',
         foregroundServiceNotificationId: _locationNotificationId,
         foregroundServiceTypes: const [AndroidForegroundType.location],
       ),

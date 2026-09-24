@@ -540,7 +540,7 @@ class _LoginPageState extends State<LoginPage> {
                         Align(
                           alignment: Alignment.center,
                           child: Text(
-                            'Acceso a ScanAGBC',
+                            'Acceso a ChasquiApp',
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: AppTheme.blueDark),
