@@ -2,21 +2,20 @@
 
 La API usa PHP-FPM 8.2 y Nginx en contenedores independientes, con reinicio
 automático. Dirección interna: `http://172.65.10.56:8001/api`.
-Dirección pública HTTPS: `https://dev.correos.gob.bo:18100/chasquiapp/api`.
+Dirección pública HTTPS: `https://trackingbo.correos.gob.bo:8100/chasquiapp/api`.
 
 El Nginx existente de `bolipost_app` publica `/chasquiapp/` mediante un proxy
 a `172.65.10.56:8001`, quitando ese prefijo. Su configuración persistente está
 en `/home/agbc/bolipost/docker/nginx.conf`. Las otras rutas de ese servidor
 conservan su comportamiento. Nginx se validó antes de recargarlo.
 
-Descarga Android: `https://dev.correos.gob.bo:18100/chasquiapp/descargas/`.
+Descarga Android: `https://trackingbo.correos.gob.bo:8100/chasquiapp/descargas/`.
 El APK se publica en `public/descargas/chasquiapp.apk` y queda excluido de Git.
 El teléfono muestra el nombre `ChasquiApp`, definido por el proyecto Android.
 
 La app consulta `GET /api/mobile/app-version` al iniciar y al volver al primer
 plano. El enlace del APK se arma con `APP_URL` de cada instalación; configura
 ese valor con su dominio público y el prefijo `/chasquiapp`. Por ejemplo,
-`https://dev.correos.gob.bo:18100/chasquiapp` o
 `https://trackingbo.correos.gob.bo:8100/chasquiapp`. Deja
 `MOBILE_DOWNLOAD_URL` vacío para usar ese enlace automáticamente, o asígnalo
 solo si necesitas una dirección fija distinta. Para exigir una actualización,

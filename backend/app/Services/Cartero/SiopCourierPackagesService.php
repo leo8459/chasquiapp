@@ -190,12 +190,14 @@ class SiopCourierPackagesService
             $codes,
             array_values($shipmentsByCode),
         );
+        $pickupToken = $this->requiredConfig('contract_pickup_token');
 
         try {
             $response = Http::acceptJson()
                 ->asForm()
+                ->withToken($pickupToken)
                 ->withHeaders([
-                    'X-API-Token' => $this->requiredConfig('contract_pickup_token'),
+                    'X-API-Token' => $pickupToken,
                 ])
                 ->connectTimeout(30)
                 ->timeout(max(30, (int) config('services.siop_courier_packages.timeout', 30)))
