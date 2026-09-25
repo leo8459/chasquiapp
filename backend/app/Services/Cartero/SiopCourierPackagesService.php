@@ -160,8 +160,9 @@ class SiopCourierPackagesService
         ];
     }
 
-    public function pickupContractPackages(array $rawShipments): array
+    public function pickupContractPackages(?string $mobileToken, array $rawShipments): array
     {
+        $siopToken = $this->siopAccessToken($mobileToken);
         $shipmentsByCode = [];
         foreach ($rawShipments as $rawShipment) {
             if (! is_array($rawShipment)) {
@@ -190,12 +191,14 @@ class SiopCourierPackagesService
             $codes,
             array_values($shipmentsByCode),
         );
+        $pickupToken = $this->requiredConfig('contract_pickup_token');
 
         try {
             $response = Http::acceptJson()
                 ->asForm()
+                ->withToken($siopToken)
                 ->withHeaders([
-                    'X-API-Token' => $this->requiredConfig('contract_pickup_token'),
+                    'X-API-Token' => $pickupToken,
                 ])
                 ->connectTimeout(5)
                 ->timeout(max(1, (int) config('services.siop_courier_packages.timeout', 20)))
@@ -434,6 +437,14 @@ class SiopCourierPackagesService
         $status = $response->status();
 
         if ($status === 401) {
+            if (str_contains(strtolower($message), 'token de acceso invalido')) {
+                throw new MobileApiException(
+                    'La credencial de integracion de ChasquiApp no es valida en Bolipost.',
+                    502,
+                    'SIOP_COURIER_INTEGRATION_AUTH_FAILED',
+                );
+            }
+
             throw new MobileApiException(
                 'Tu sesion SIOP vencio. Vuelve a iniciar sesion.',
                 401,

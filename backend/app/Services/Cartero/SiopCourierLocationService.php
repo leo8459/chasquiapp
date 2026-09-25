@@ -30,11 +30,12 @@ class SiopCourierLocationService
         $data = array_filter([
             'latitude' => (float) $location['latitude'],
             'longitude' => (float) $location['longitude'],
-            'accuracy' => isset($location['accuracy']) ? (float) $location['accuracy'] : null,
-            'altitude' => isset($location['altitude']) ? (float) $location['altitude'] : null,
-            'speed' => isset($location['speed']) ? (float) $location['speed'] : null,
+            'accuracy_m' => isset($location['accuracy']) ? (float) $location['accuracy'] : null,
+            'speed_kmh' => isset($location['speed'])
+                ? round((float) $location['speed'] * 3.6, 2)
+                : null,
             'heading' => isset($location['heading']) ? (float) $location['heading'] : null,
-            'captured_at' => $location['captured_at'] ?? null,
+            'sent_at' => $location['captured_at'] ?? null,
         ], static fn (mixed $value): bool => $value !== null && $value !== '');
 
         return $this->request('POST', $siopToken, $data);
@@ -94,6 +95,17 @@ class SiopCourierLocationService
             'status' => $status,
             'message' => $message,
         ]);
+
+        if (
+            $status === 401
+            && str_contains(strtolower($message), 'token de acceso invalido')
+        ) {
+            throw new MobileApiException(
+                'La credencial de integracion de rastreo no es valida en Bolipost.',
+                502,
+                'SIOP_COURIER_INTEGRATION_AUTH_FAILED',
+            );
+        }
 
         if ($status === 401) {
             throw new MobileApiException(

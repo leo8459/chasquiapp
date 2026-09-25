@@ -53,7 +53,10 @@ class SelfPackageAssignmentController extends Controller
         SiopCourierPackagesService $service,
     ): JsonResponse {
         return MobileApiResponse::success(
-            $service->pickupContractPackages($request->array('shipments')),
+            $service->pickupContractPackages(
+                $request->bearerToken(),
+                $request->array('shipments'),
+            ),
         );
     }
 }
