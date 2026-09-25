@@ -51,7 +51,7 @@ class SiopMantenimientoService
         try {
             $response = Http::acceptJson()
                 ->withToken($token)
-                ->connectTimeout(30)
+                ->connectTimeout(min(5, $timeout))
                 ->timeout($timeout)
                 ->withOptions(['verify' => $verifySsl])
                 ->post($url, $data)
@@ -93,7 +93,7 @@ class SiopMantenimientoService
         try {
             $response = Http::acceptJson()
                 ->withToken($token)
-                ->connectTimeout(30)
+                ->connectTimeout(min(5, $timeout))
                 ->timeout($timeout)
                 ->retry(1, 250)
                 ->withOptions(['verify' => $verifySsl])
@@ -120,7 +120,7 @@ class SiopMantenimientoService
     {
         $url = rtrim(trim((string) config('services.siop_mantenimientos.url')), '/');
         $token = trim((string) config('services.siop_mantenimientos.token'));
-        $timeout = max(30, (int) config('services.siop_mantenimientos.timeout', 30));
+        $timeout = max(1, (int) config('services.siop_mantenimientos.timeout', 20));
         $verifySsl = (bool) config('services.siop_mantenimientos.verify_ssl', true);
 
         if ($url === '' || $token === '') {

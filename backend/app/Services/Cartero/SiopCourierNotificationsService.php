@@ -42,8 +42,8 @@ class SiopCourierNotificationsService
             $response = Http::acceptJson()
                 ->withToken($siopToken)
                 ->withHeaders(['X-API-Token' => $integrationToken])
-                ->connectTimeout(30)
-                ->timeout(max(30, (int) config('services.siop_courier_notifications.timeout', 30)))
+                ->connectTimeout(5)
+                ->timeout(max(1, (int) config('services.siop_courier_notifications.timeout', 20)))
                 ->withOptions([
                     'verify' => (bool) config('services.siop_courier_notifications.verify_ssl', true),
                 ])

@@ -26,8 +26,8 @@ class SiopLoginService
             $response = Http::acceptJson()
                 ->asJson()
                 ->withToken($token)
-                ->connectTimeout(30)
-                ->timeout(max(30, (int) config('services.siop_login.timeout', 30)))
+                ->connectTimeout(5)
+                ->timeout(max(1, (int) config('services.siop_login.timeout', 15)))
                 ->withOptions([
                     'verify' => (bool) config('services.siop_login.verify_ssl', true),
                 ])
@@ -65,17 +65,6 @@ class SiopLoginService
         $message = trim((string) $response->json('message'));
 
         if ($status === 401) {
-            $normalizedMessage = strtolower($message);
-            if (str_contains($normalizedMessage, 'token de acceso')
-                || str_contains($normalizedMessage, 'token invalido')
-                || str_contains($normalizedMessage, 'token inválido')) {
-                throw new MobileApiException(
-                    'El servicio de autenticacion SIOP requiere renovar su token de integracion.',
-                    503,
-                    'SIOP_LOGIN_TOKEN_INVALID',
-                );
-            }
-
             throw new MobileApiException(
                 'Usuario o contrasena incorrectos.',
                 401,

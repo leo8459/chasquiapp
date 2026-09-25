@@ -160,9 +160,8 @@ class SiopCourierPackagesService
         ];
     }
 
-    public function pickupContractPackages(?string $mobileToken, array $rawShipments): array
+    public function pickupContractPackages(array $rawShipments): array
     {
-        $siopToken = $this->siopAccessToken($mobileToken);
         $shipmentsByCode = [];
         foreach ($rawShipments as $rawShipment) {
             if (! is_array($rawShipment)) {
@@ -191,17 +190,15 @@ class SiopCourierPackagesService
             $codes,
             array_values($shipmentsByCode),
         );
-        $pickupToken = $this->requiredConfig('contract_pickup_token');
 
         try {
             $response = Http::acceptJson()
                 ->asForm()
-                ->withToken($siopToken)
                 ->withHeaders([
-                    'X-API-Token' => $pickupToken,
+                    'X-API-Token' => $this->requiredConfig('contract_pickup_token'),
                 ])
-                ->connectTimeout(30)
-                ->timeout(max(30, (int) config('services.siop_courier_packages.timeout', 30)))
+                ->connectTimeout(5)
+                ->timeout(max(1, (int) config('services.siop_courier_packages.timeout', 20)))
                 ->withOptions([
                     'verify' => (bool) config('services.siop_courier_packages.verify_ssl', true),
                 ])
@@ -217,7 +214,7 @@ class SiopCourierPackagesService
         }
 
         if (! $response->successful()) {
-            $this->throwForContractPickupFailedResponse($response);
+            $this->throwForFailedResponse($response);
         }
 
         $payload = $response->json();
@@ -344,8 +341,8 @@ class SiopCourierPackagesService
             $response = Http::acceptJson()
                 ->withToken($siopToken)
                 ->withHeaders(['X-API-Token' => $integrationToken])
-                ->connectTimeout(30)
-                ->timeout(max(30, (int) config('services.siop_courier_packages.deliver_timeout', 30)))
+                ->connectTimeout(5)
+                ->timeout(max(1, (int) config('services.siop_courier_packages.deliver_timeout', 60)))
                 ->withOptions([
                     'verify' => (bool) config('services.siop_courier_packages.verify_ssl', true),
                 ])
@@ -398,8 +395,8 @@ class SiopCourierPackagesService
                 ->asJson()
                 ->withToken($siopToken)
                 ->withHeaders(['X-API-Token' => $integrationToken])
-                ->connectTimeout(30)
-                ->timeout(max(30, (int) config('services.siop_courier_packages.timeout', 30)))
+                ->connectTimeout(5)
+                ->timeout(max(1, (int) config('services.siop_courier_packages.timeout', 20)))
                 ->withOptions([
                     'verify' => (bool) config('services.siop_courier_packages.verify_ssl', true),
                 ]);
@@ -464,38 +461,6 @@ class SiopCourierPackagesService
             'No pudimos completar la operacion de paquetes en SIOP.',
             503,
             'SIOP_COURIER_PACKAGES_FAILED',
-        );
-    }
-
-    private function throwForContractPickupFailedResponse(Response $response): never
-    {
-        $status = $response->status();
-        $message = trim((string) $response->json('message'));
-
-        Log::warning('SIOP rechazo la solicitud de recojo de paquetes de contrato.', [
-            'status' => $status,
-        ]);
-
-        if ($status === 401 || $status === 403) {
-            throw new MobileApiException(
-                "SIOP rechazo la credencial de recojo (HTTP {$status}). Verifica SIOP_CONTRACT_PICKUP_TOKEN en el servidor.",
-                502,
-                'SIOP_CONTRACT_PICKUP_AUTH_FAILED',
-            );
-        }
-
-        if ($status === 422) {
-            throw new MobileApiException(
-                $message !== '' ? $message : 'SIOP rechazo los datos de los paquetes. Revisa los codigos y pesos.',
-                422,
-                'SIOP_CONTRACT_PICKUP_VALIDATION_ERROR',
-            );
-        }
-
-        throw new MobileApiException(
-            "SIOP respondio HTTP {$status} al intentar recoger los paquetes.",
-            502,
-            'SIOP_CONTRACT_PICKUP_FAILED',
         );
     }
 

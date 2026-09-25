@@ -79,22 +79,6 @@ class SiopLoginTest extends TestCase
             ->assertJsonPath('error_code', 'INVALID_CREDENTIALS');
     }
 
-    public function test_invalid_siop_integration_token_is_not_reported_as_bad_user_credentials(): void
-    {
-        Http::fake([
-            'https://siop.example.test/login' => Http::response([
-                'message' => 'Token de acceso invalido, vencido o dado de baja.',
-            ], 401),
-        ]);
-
-        $this->postJson('/api/mobile/auth/login', [
-            'alias' => 'usuario.siop',
-            'password' => 'clave-secreta',
-        ])
-            ->assertStatus(503)
-            ->assertJsonPath('error_code', 'SIOP_LOGIN_TOKEN_INVALID');
-    }
-
     public function test_authenticated_siop_user_without_roles_gets_read_only_access(): void
     {
         Http::fake([
