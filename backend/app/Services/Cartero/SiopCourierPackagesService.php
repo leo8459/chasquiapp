@@ -160,8 +160,9 @@ class SiopCourierPackagesService
         ];
     }
 
-    public function pickupContractPackages(array $rawShipments): array
+    public function pickupContractPackages(?string $mobileToken, array $rawShipments): array
     {
+        $siopToken = $this->siopAccessToken($mobileToken);
         $shipmentsByCode = [];
         foreach ($rawShipments as $rawShipment) {
             if (! is_array($rawShipment)) {
@@ -195,7 +196,7 @@ class SiopCourierPackagesService
         try {
             $response = Http::acceptJson()
                 ->asForm()
-                ->withToken($pickupToken)
+                ->withToken($siopToken)
                 ->withHeaders([
                     'X-API-Token' => $pickupToken,
                 ])

@@ -257,7 +257,7 @@ class CourierPackagesTest extends TestCase
             ->assertJsonPath('unprocessed_codes', []);
 
         Http::assertSent(fn (Request $request): bool => $request->url() === 'https://siop.example.test/pickup-contract'
-            && $request->hasHeader('Authorization', 'Bearer pickup-integration-token')
+            && $request->hasHeader('Authorization', 'Bearer siop-user-token')
             && $request->hasHeader('X-API-Token', 'pickup-integration-token')
             && $request['envios'] === [
                 ['codigo' => 'C0001A89843BO', 'peso' => 1.25],
