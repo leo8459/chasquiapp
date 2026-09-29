@@ -39,7 +39,7 @@ DB_SSLMODE=prefer
 Configura la integracion de inicio de sesion SIOP (el token solo debe existir en el servidor, nunca en Flutter):
 
 ```env
-SIOP_LOGIN_URL=https://dev.correos.gob.bo:18100/api/integraciones/siop/login
+SIOP_LOGIN_URL=https://dev.correos.gob.bo/api/integraciones/siop/login
 SIOP_LOGIN_TOKEN=TOKEN_DE_INTEGRACION
 SIOP_LOGIN_TIMEOUT=15
 SIOP_LOGIN_VERIFY_SSL=true

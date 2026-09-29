@@ -268,7 +268,7 @@ servidor, actualiza `API_BASE_URL` en `.env` y vuelve a compilar el APK.
 Al iniciar sesión con un rol de cartero, Android mantiene un servicio de
 ubicación en primer plano. El rastreo continúa con la pantalla apagada y al
 quitar la aplicación de la lista de aplicaciones recientes. Mientras esté
-activo, Android muestra la notificación permanente `Rastreo de reparto activo`.
+activo, Android muestra la notificación permanente `Iniciando repartición`.
 
 El servicio se detiene al cerrar sesión. La opción `Forzar detención` de los
 ajustes de Android también lo detiene y ninguna aplicación puede reiniciarse
