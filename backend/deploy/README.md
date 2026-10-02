@@ -9,6 +9,25 @@ a `172.65.10.56:8001`, quitando ese prefijo. Su configuración persistente está
 en `/home/agbc/bolipost/docker/nginx.conf`. Las otras rutas de ese servidor
 conservan su comportamiento. Nginx se validó antes de recargarlo.
 
+## Cadena TLS para Android anteriores
+
+El Nginx del host termina TLS usando
+`/etc/ssl/correos2026/correos2026.crt`; la llave privada permanece en el host,
+fuera del repositorio. El certificado wildcard usa la CA Sectigo OV R36,
+encadenada a la raíz R46. Para conservar compatibilidad con almacenes Android
+que todavía no incluyen R46, Nginx debe presentar la cadena cruzada R46 firmada
+por USERTrust RSA. El certificado público correspondiente está en
+[`certs/sectigo-r46-usertrust.crt`](certs/sectigo-r46-usertrust.crt); Sectigo
+documenta esta cadena en su
+[guía oficial de jerarquía y cross-signing](https://www.sectigo.com/knowledge-base/detail/Sectigo-new-Public-Roots-and-Issuing-CAs-Hierarchy).
+
+El archivo de `ssl_certificate` debe ordenar los certificados así: certificado
+del servidor, Sectigo Public Server Authentication CA OV R36, y el certificado
+R46 cruzado con USERTrust RSA. No se debe incluir en su lugar la raíz R46
+autofirmada. Mantén la llave privada fuera del repositorio. Después de renovar
+el certificado, valida la cadena con `openssl verify` y `openssl s_client`,
+ejecuta `nginx -t` y recarga Nginx.
+
 Descarga Android: `https://trackingbo.correos.gob.bo/chasquiapp/descargas/`.
 El APK se publica en `public/descargas/chasquiapp.apk` y queda excluido de Git.
 El teléfono muestra el nombre `ChasquiApp`, definido por el proyecto Android.
