@@ -18,6 +18,7 @@ class PackageTrackingSearchCard extends StatelessWidget {
     this.loadingLabel = 'Consultando...',
     this.helperText,
     this.onScanWithCamera,
+    this.onChanged,
     this.maxCodeLength = 20,
   });
 
@@ -32,6 +33,7 @@ class PackageTrackingSearchCard extends StatelessWidget {
   final String loadingLabel;
   final String? helperText;
   final Future<void> Function()? onScanWithCamera;
+  final ValueChanged<String>? onChanged;
   final int maxCodeLength;
 
   @override
@@ -62,6 +64,7 @@ class PackageTrackingSearchCard extends StatelessWidget {
             controller: controller,
             focusNode: focusNode,
             textInputAction: TextInputAction.search,
+            onChanged: onChanged,
             onSubmitted: (_) => onSearch(),
             enableInteractiveSelection: true,
             inputFormatters: [

@@ -52,6 +52,8 @@ class ApiAuthRepository extends AuthRepository {
       await _onAuthenticatedUserChanged?.call();
 
       return user;
+    } on ApiException {
+      rethrow;
     } catch (error) {
       throw StateError(
         UserFriendlyErrorMapper.message(

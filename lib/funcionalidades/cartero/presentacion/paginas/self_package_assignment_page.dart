@@ -35,6 +35,7 @@ class _SelfPackageAssignmentPageState extends State<SelfPackageAssignmentPage> {
       _loadAssignments();
   List<AssignedPackageSummary> _loadedAssignments =
       const <AssignedPackageSummary>[];
+  String _assignmentSearchQuery = '';
   bool _scanning = false;
   bool _assigning = false;
   int? _deliveringAssignmentId;
@@ -61,6 +62,12 @@ class _SelfPackageAssignmentPageState extends State<SelfPackageAssignmentPage> {
   }
 
   Future<void> _addTypedCode() => _addCode(_codeController.text);
+
+  void _onCodeChanged(String rawCode) {
+    setState(() {
+      _assignmentSearchQuery = PackageCodeClassifier.normalize(rawCode);
+    });
+  }
 
   Future<void> _pasteCode() async {
     final clipboard = await Clipboard.getData(Clipboard.kTextPlain);
@@ -98,6 +105,14 @@ class _SelfPackageAssignmentPageState extends State<SelfPackageAssignmentPage> {
       (item) => PackageCodeClassifier.normalize(item.code) == code,
     );
     if (alreadyAssigned) {
+      setState(() {
+        _codeController.value = TextEditingValue(
+          text: code,
+          selection: TextSelection.collapsed(offset: code.length),
+        );
+        _assignmentSearchQuery = code;
+      });
+      FocusScope.of(context).unfocus();
       showAppFeedbackBanner(
         context,
         '$code ya está asignado a tu cuenta.',
@@ -109,6 +124,7 @@ class _SelfPackageAssignmentPageState extends State<SelfPackageAssignmentPage> {
     setState(() {
       _selectedCodes.add(code);
       _codeController.clear();
+      _assignmentSearchQuery = '';
     });
     FocusScope.of(context).unfocus();
   }
@@ -224,8 +240,9 @@ class _SelfPackageAssignmentPageState extends State<SelfPackageAssignmentPage> {
               buttonLabel: 'Agregar a prelista',
               loadingLabel: _scanning ? 'Escaneando...' : 'Procesando...',
               helperText:
-                  'Agrega uno o varios códigos antes de confirmar la asignación.',
+                  'Escribe o escanea un código. Si ya está asignado, aparecerá en los resultados.',
               onSearch: _addTypedCode,
+              onChanged: _onCodeChanged,
               onPasteCode: _pasteCode,
               onScanWithCamera: widget.onScanCodeWithCamera == null
                   ? null
@@ -262,8 +279,36 @@ class _SelfPackageAssignmentPageState extends State<SelfPackageAssignmentPage> {
                   );
                 }
                 final assignments = snapshot.data ?? const [];
+                final normalizedQuery = PackageCodeClassifier.normalize(
+                  _assignmentSearchQuery,
+                );
+                final exactMatches = normalizedQuery.isEmpty
+                    ? const <AssignedPackageSummary>[]
+                    : assignments
+                          .where(
+                            (item) =>
+                                PackageCodeClassifier.normalize(item.code) ==
+                                normalizedQuery,
+                          )
+                          .toList(growable: false);
+                final visibleAssignments = normalizedQuery.isEmpty
+                    ? assignments
+                    : exactMatches.isNotEmpty
+                    ? exactMatches
+                    : assignments
+                          .where(
+                            (item) => PackageCodeClassifier.normalize(
+                              item.code,
+                            ).contains(normalizedQuery),
+                          )
+                          .toList(growable: false);
                 return _AssignedPackagesSection(
-                  assignments: assignments,
+                  assignments: visibleAssignments,
+                  searchQuery: normalizedQuery,
+                  onClearSearch: () {
+                    _codeController.clear();
+                    setState(() => _assignmentSearchQuery = '');
+                  },
                   deliveringAssignmentId: _deliveringAssignmentId,
                   onDeliver: _deliverPackage,
                 );
@@ -362,11 +407,15 @@ class _SelectionPreviewCard extends StatelessWidget {
 class _AssignedPackagesSection extends StatelessWidget {
   const _AssignedPackagesSection({
     required this.assignments,
+    required this.searchQuery,
+    required this.onClearSearch,
     required this.deliveringAssignmentId,
     required this.onDeliver,
   });
 
   final List<AssignedPackageSummary> assignments;
+  final String searchQuery;
+  final VoidCallback onClearSearch;
   final int? deliveringAssignmentId;
   final ValueChanged<AssignedPackageSummary> onDeliver;
 
@@ -452,19 +501,38 @@ class _AssignedPackagesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Paquetes asignados (${assignments.length})',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: AppTheme.blueDark,
-            fontWeight: FontWeight.w900,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                searchQuery.isEmpty
+                    ? 'Paquetes asignados (${assignments.length})'
+                    : 'Resultados (${assignments.length})',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppTheme.blueDark,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            if (searchQuery.isNotEmpty)
+              TextButton(
+                onPressed: onClearSearch,
+                child: const Text('Ver todos'),
+              ),
+          ],
         ),
         const SizedBox(height: 10),
         if (assignments.isEmpty)
-          const _MessageCard(
-            icon: Icons.inventory_2_outlined,
-            title: 'Sin paquetes asignados',
-            message: 'Cuando te asignes paquetes aparecerán en esta lista.',
+          _MessageCard(
+            icon: searchQuery.isEmpty
+                ? Icons.inventory_2_outlined
+                : Icons.search_off_rounded,
+            title: searchQuery.isEmpty
+                ? 'Sin paquetes asignados'
+                : 'Paquete no encontrado',
+            message: searchQuery.isEmpty
+                ? 'Cuando te asignes paquetes aparecerán en esta lista.'
+                : 'No hay paquetes asignados con ese código.',
           )
         else
           ...assignments.map(

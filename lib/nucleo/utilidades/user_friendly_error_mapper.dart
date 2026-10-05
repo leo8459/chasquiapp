@@ -1,3 +1,5 @@
+import 'package:scan_agbc/nucleo/red/api_client.dart';
+
 class UserFriendlyErrorMapper {
   const UserFriendlyErrorMapper._();
 
@@ -5,10 +7,28 @@ class UserFriendlyErrorMapper {
     Object? error, {
     String fallback = 'Algo no salió como esperábamos. Intenta nuevamente.',
   }) {
+    if (error is ApiException) {
+      final apiMessage = _messageForApiException(error);
+      if (apiMessage != null) return apiMessage;
+    }
+
     final raw = _rawMessage(error);
     if (raw.isEmpty) return fallback;
 
     final normalized = raw.toLowerCase();
+
+    if (_containsAny(normalized, const [
+      'url base de la api no fue configurada',
+      'api_base_url',
+    ])) {
+      return 'La app no tiene configurada la direcci\u00f3n del servidor. Contacta al administrador.';
+    }
+
+    if ((normalized.contains('el usuario o la contrase') ||
+            normalized.contains('el alias o la contrase')) &&
+        normalized.contains('no son correctos')) {
+      return 'El alias o la contrase\u00f1a no son correctos.';
+    }
 
     if (_containsAny(normalized, const [
       'sesion exp',
@@ -113,6 +133,50 @@ class UserFriendlyErrorMapper {
     return false;
   }
 
+  static String? _messageForApiException(ApiException error) {
+    switch (error.code?.trim().toUpperCase()) {
+      case 'INVALID_CREDENTIALS':
+        return 'El alias o la contrase\u00f1a no son correctos.';
+      case 'ALIAS_REQUIRED':
+        return 'Ingresa tu alias de SIOP.';
+      case 'PASSWORD_REQUIRED':
+        return 'Ingresa tu contrase\u00f1a.';
+      case 'ROLE_NOT_ALLOWED':
+        return 'Tu cuenta no tiene un rol autorizado para usar esta app. Contacta al administrador.';
+      case 'SIOP_LOGIN_NOT_CONFIGURED':
+        return 'El acceso a SIOP no est\u00e1 configurado en el servidor. Contacta al administrador.';
+      case 'SIOP_LOGIN_UNAVAILABLE':
+        return 'El servidor no pudo conectarse con SIOP. Intenta nuevamente m\u00e1s tarde.';
+      case 'SIOP_LOGIN_TOKEN_INVALID':
+        return 'La autorizaci\u00f3n del servidor para conectarse con SIOP necesita renovarse. Contacta al administrador.';
+      case 'SIOP_LOGIN_RATE_LIMITED':
+        return 'Hubo demasiados intentos de ingreso. Espera un momento antes de volver a intentarlo.';
+      case 'SIOP_LOGIN_VALIDATION_ERROR':
+        return 'SIOP no pudo validar los datos. Revisa tu alias y contrase\u00f1a e intenta nuevamente.';
+      case 'SIOP_LOGIN_INVALID_RESPONSE':
+        return 'SIOP devolvi\u00f3 una respuesta inesperada. Contacta al administrador.';
+      case 'SIOP_LOGIN_FAILED':
+        return 'SIOP no pudo completar el ingreso en este momento. Intenta m\u00e1s tarde.';
+      case 'SIOP_USER_ID_MISSING':
+        return 'SIOP valid\u00f3 el ingreso, pero no devolvi\u00f3 los datos necesarios de tu cuenta. Contacta al administrador.';
+      case 'MOBILE_API_UNAVAILABLE':
+        return 'El servidor tuvo un problema al procesar el ingreso. Intenta nuevamente y, si persiste, contacta al administrador.';
+      case 'NETWORK_UNAVAILABLE':
+        return 'No se pudo conectar con el servidor de la app. Revisa tu conexi\u00f3n y vuelve a intentarlo.';
+      case 'REQUEST_TIMEOUT':
+        return 'El servidor tard\u00f3 demasiado en responder. Intenta nuevamente en unos momentos.';
+      case 'TLS_HANDSHAKE_ERROR':
+        return 'No se pudo establecer una conexi\u00f3n segura con el servidor. Contacta al administrador si el problema contin\u00faa.';
+      case 'INVALID_RESPONSE':
+      case 'UNEXPECTED_PAYLOAD':
+        return 'El servidor devolvi\u00f3 una respuesta inv\u00e1lida. Intenta m\u00e1s tarde y contacta al administrador si persiste.';
+      case 'SESSION_EXPIRED':
+        return 'Tu sesi\u00f3n termin\u00f3. Vuelve a ingresar para continuar.';
+      default:
+        return null;
+    }
+  }
+
   static bool _containsTechnicalDetails(String raw, String normalized) {
     if (RegExp(r'^[A-Z][A-Z0-9_]{2,}$').hasMatch(raw)) return true;
 
@@ -142,6 +206,8 @@ class UserFriendlyErrorMapper {
 
   static bool _isSafeBusinessMessage(String normalized) {
     const safePrefixes = [
+      'la app no tiene configurada',
+      'el alias o la contrase',
       'debes ',
       'ingresa ',
       'ingrese ',
