@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Autenticacion\MobileAuthController;
+use App\Http\Controllers\Api\MobileAppVersionController;
 use App\Http\Controllers\Api\Cartero\MobileAssignmentDeliveryController;
 use App\Http\Controllers\Api\Cartero\MobileCarteroController;
 use App\Http\Controllers\Api\Cartero\SelfCourierLocationController;
@@ -28,7 +29,12 @@ Route::match(['GET', 'POST'], '/tracking/package', TrackingLookupController::cla
 Route::match(['GET', 'POST'], '/tracking/events', TrackingEventsController::class)
     ->middleware('throttle:mobile-public');
 
-Route::prefix('mobile')->as('mobile.')->group(function (): void {
+Route::prefix('mobile')->as('mobile.')->middleware('mobile.app.version')->group(function (): void {
+    Route::get('/app-version', MobileAppVersionController::class)
+        ->withoutMiddleware('mobile.app.version')
+        ->middleware('throttle:mobile-public')
+        ->name('app-version');
+
     Route::post('/auth/login', [MobileAuthController::class, 'login'])
         ->middleware('throttle:mobile-login')
         ->name('auth.login');

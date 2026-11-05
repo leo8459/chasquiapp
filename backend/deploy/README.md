@@ -33,15 +33,47 @@ El APK se publica en `public/descargas/chasquiapp.apk` y queda excluido de Git.
 El teléfono muestra el nombre `ChasquiApp`, definido por el proyecto Android.
 
 La app consulta `GET /api/mobile/app-version` al iniciar y al volver al primer
-plano. El enlace del APK se arma con `APP_URL` de cada instalación; configura
+plano. Todas sus solicitudes incluyen `X-App-Version` con la versión real
+instalada y el número de compilación, por ejemplo `1.0.5+6`. El servidor exige
+coincidencia exacta con `MOBILE_REQUIRED_VERSION`: versiones distintas (incluso
+superiores), otro build o ausencia del encabezado reciben HTTP 426 antes del
+login o del acceso a rutas protegidas. Esto incluye sesiones recordadas y huella.
+
+El enlace de descarga se arma con `APP_URL` de cada instalación; configura
 ese valor con su dominio público y el prefijo `/chasquiapp`. Por ejemplo,
 `https://trackingbo.correos.gob.bo/chasquiapp`. Deja
 `MOBILE_DOWNLOAD_URL` vacío para usar ese enlace automáticamente, o asígnalo
-solo si necesitas una dirección fija distinta. Para exigir una actualización,
-sube el APK nuevo conservando la
-misma clave de firma y aumenta `MOBILE_MINIMUM_VERSION` a la versión de
-`pubspec.yaml`; luego ejecuta `php artisan config:cache` y reinicia PHP-FPM.
-El bloqueo requiere conexión al servidor.
+solo si necesitas una dirección fija distinta. `MOBILE_MINIMUM_VERSION` ya no se
+usa: el control ahora autoriza una única versión completa.
+
+Para publicar cada actualización:
+
+1. Incrementa `version` en `pubspec.yaml` (versión y build; esta entrega es `1.0.5+6`).
+2. Compila el APK de producción con la URL de API correcta y la misma clave de
+   firma utilizada en los dispositivos. Publica primero el APK nuevo en
+   `public/descargas/chasquiapp.apk` y comprueba su enlace de descarga.
+3. Despliega el backend con este control y configura en el `.env` del servidor:
+
+   ```dotenv
+   MOBILE_REQUIRED_VERSION=1.0.5+6
+   MOBILE_DOWNLOAD_URL=
+   ```
+
+4. Ejecuta `php artisan config:cache` y reinicia PHP-FPM usando los comandos
+   del despliegue indicados abajo. Si usas caché de rutas, regenera también
+   `php artisan route:cache` para registrar `/api/mobile/app-version`.
+
+La app bloquea el acceso mientras comprueba la versión o si falla la conexión,
+y permite reintentar. El modal obligatorio muestra las versiones instalada y
+requerida, permite abrir el enlace en el navegador y copiarlo. Un HTTP 426 durante
+una sesión activa vuelve a bloquear la interfaz.
+
+Las apps anteriores a esta entrega no contienen el modal ni envían el encabezado:
+el servidor sí les negará acceso, pero la primera instalación con este mecanismo
+debe distribuirse por el enlace de descarga. Las actualizaciones siguientes
+mostrarán el modal automáticamente. Cambiar archivos locales no publica el backend
+ni el APK en el servidor. El encabezado es un control de compatibilidad para la
+app oficial; no certifica la integridad de clientes modificados.
 
 El archivo privado `backend/.env` contiene la configuración de producción.
 PostgreSQL es el existente en `172.65.10.56:5432`; este despliegue no ejecuta

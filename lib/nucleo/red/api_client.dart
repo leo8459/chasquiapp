@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:scan_agbc/nucleo/configuracion/api_config.dart';
+import 'package:scan_agbc/nucleo/servicios/app_version.dart';
 import 'package:flutter/foundation.dart';
 
 const int _jsonIsolateDecodeThreshold = 48 * 1024;
@@ -66,6 +67,9 @@ class ApiClient {
 
   final ApiConfig _config;
   final HttpClient _httpClient;
+
+  // El bloqueo global escucha también rechazos durante una sesión activa.
+  final requiredUpdate = ValueNotifier<Map<String, dynamic>?>(null);
 
   String? _accessToken;
 
@@ -149,7 +153,9 @@ class ApiClient {
     while (true) {
       try {
         final uri = _buildUri(path, queryParameters);
+        final installedVersion = await InstalledAppVersion.read();
         final request = await _httpClient.openUrl(method, uri);
+        request.headers.set('X-App-Version', installedVersion);
         request.headers.set(HttpHeaders.acceptHeader, 'application/json');
         request.headers.set(HttpHeaders.acceptEncodingHeader, 'gzip');
         request.persistentConnection = true;
@@ -352,6 +358,9 @@ class ApiClient {
         _extractMessage(normalizedPayload) ??
         _fallbackMessageForStatusCode(statusCode);
 
+    if (statusCode == 426) {
+      requiredUpdate.value = normalizedPayload ?? <String, dynamic>{};
+    }
     return ApiException(message: message, statusCode: statusCode, code: code);
   }
 

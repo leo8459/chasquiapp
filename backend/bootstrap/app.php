@@ -2,6 +2,7 @@
 
 use App\Exceptions\MobileApiException;
 use App\Http\Middleware\AuthenticateMobileApiToken;
+use App\Http\Middleware\RequireMobileAppVersion;
 use App\Support\MobileApi\MobileApiResponse;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'mobile.api.auth' => AuthenticateMobileApiToken::class,
+            'mobile.app.version' => RequireMobileAppVersion::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

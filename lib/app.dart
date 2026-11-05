@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'funcionalidades/autenticacion/presentacion/paginas/login_page.dart';
 import 'nucleo/componentes/app_feedback_banner.dart';
+import 'nucleo/componentes/app_version_gate.dart';
 import 'nucleo/inyeccion/app_services.dart';
 import 'nucleo/tema/app_theme.dart';
 
@@ -38,6 +39,8 @@ class _BaseFlutterAndroidAppState extends State<BaseFlutterAndroidApp> {
       title: 'ChasquiApp',
       theme: AppTheme.buildTheme(),
       scaffoldMessengerKey: appScaffoldMessengerKey,
+      builder: (context, child) =>
+          AppVersionGate(client: _services.apiClient, child: child!),
       home: LoginPage(services: _services),
     );
   }

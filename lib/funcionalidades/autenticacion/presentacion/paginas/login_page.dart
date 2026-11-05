@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:scan_agbc/nucleo/inyeccion/app_services.dart';
 import 'package:scan_agbc/nucleo/tema/app_theme.dart';
@@ -34,6 +35,7 @@ class _LoginPageState extends State<LoginPage> {
   final ValueNotifier<bool> _biometricEnabledSetting = ValueNotifier<bool>(
     false,
   );
+  late final Future<PackageInfo> _packageInfoFuture;
 
   late final _sessionSecurityService = widget.services.sessionSecurityService;
   late final _biometricAuthService = widget.services.biometricAuthService;
@@ -48,6 +50,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
+    _packageInfoFuture = PackageInfo.fromPlatform();
     _biometricUiListenable = Listenable.merge([
       _submitting,
       _bootstrapping,
@@ -375,7 +378,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _Header(),
+                        _Header(packageInfoFuture: _packageInfoFuture),
                         const SizedBox(height: 28),
                         const _FieldLabel(text: 'Alias SIOP'),
                         const SizedBox(height: 8),
@@ -567,7 +570,9 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
+  const _Header({required this.packageInfoFuture});
+
+  final Future<PackageInfo> packageInfoFuture;
 
   @override
   Widget build(BuildContext context) {
@@ -608,12 +613,54 @@ class _Header extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        Text(
-          'Bienvenido',
-          style: textTheme.headlineSmall?.copyWith(
-            color: AppTheme.blue,
-            height: 1.05,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                'Bienvenido',
+                style: textTheme.headlineSmall?.copyWith(
+                  color: AppTheme.blue,
+                  height: 1.05,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FutureBuilder<PackageInfo>(
+              future: packageInfoFuture,
+              builder: (context, snapshot) {
+                final packageInfo = snapshot.data;
+                final appVersion =
+                    packageInfo?.version ??
+                    const String.fromEnvironment('FLUTTER_BUILD_NAME');
+                final buildNumber =
+                    packageInfo?.buildNumber ??
+                    const String.fromEnvironment('FLUTTER_BUILD_NUMBER');
+                final version = buildNumber.isEmpty
+                    ? appVersion
+                    : '$appVersion+$buildNumber';
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.yellow,
+                    borderRadius: AppTheme.radiusPill,
+                    border: Border.all(color: AppTheme.blue, width: 1),
+                  ),
+                  child: Text(
+                    'v$version',
+                    style: textTheme.labelSmall?.copyWith(
+                      color: AppTheme.blue,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ],
     );

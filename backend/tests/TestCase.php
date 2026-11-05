@@ -6,5 +6,11 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-    // Laravel carga la aplicacion desde bootstrap/app.php.
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['mobile.required_version' => '1.0.5+6']);
+        $this->withHeader('X-App-Version', '1.0.5+6');
+    }
 }

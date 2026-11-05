@@ -1,7 +1,7 @@
 name: scan_agbc
 description: "Aplicacion Flutter ChasquiApp para consulta operativa de paquetes por carteros."
 publish_to: 'none'
-version: 1.0.4+5
+version: 1.0.5+6
 
 environment:
   sdk: ^3.11.0
@@ -18,11 +18,13 @@ dependencies:
   google_mlkit_text_recognition: ^0.15.1
   image_picker: ^1.2.1
   local_auth: ^2.3.0
+  package_info_plus: ^9.0.1
   shared_preferences: ^2.5.4
   workmanager: ^0.10.9
   geolocator: ^14.0.2
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:
