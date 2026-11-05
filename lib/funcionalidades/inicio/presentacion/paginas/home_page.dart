@@ -17,10 +17,12 @@ import 'package:scan_agbc/funcionalidades/mantenimiento/presentacion/paginas/man
 import 'package:scan_agbc/funcionalidades/inicio/presentacion/componentes/app_sidebar.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/assigned_package_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/available_couriers_result.dart';
+import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/pending_assignments_summary.dart';
 import 'package:scan_agbc/funcionalidades/cartero/presentacion/paginas/self_package_assignment_page.dart';
 import 'package:scan_agbc/funcionalidades/cartero/presentacion/paginas/contract_package_pickup_page.dart';
 import 'package:scan_agbc/funcionalidades/gestion/presentacion/paginas/courier_assignments_lookup_page.dart';
 import 'package:scan_agbc/funcionalidades/gestion/presentacion/paginas/recent_regional_assignments_page.dart';
+import 'package:scan_agbc/funcionalidades/gestion/presentacion/componentes/pending_assignments_alert_panel.dart';
 import 'package:scan_agbc/funcionalidades/seguimiento/presentacion/componentes/package_tracking_panel.dart';
 import 'package:scan_agbc/funcionalidades/clasificacion/presentacion/controladores/scanner_controller.dart';
 import 'package:scan_agbc/funcionalidades/clasificacion/presentacion/paginas/scanner_page.dart';
@@ -76,11 +78,13 @@ class HomePage extends StatefulWidget {
     required this.currentUser,
     required this.services,
     required this.area,
+    this.showPendingAlertOnOpen = true,
   });
 
   final AuthenticatedUser currentUser;
   final AppServices services;
   final UserArea area;
+  final bool showPendingAlertOnOpen;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -98,12 +102,16 @@ class _HomePageState extends State<HomePage> {
   bool _useBiometric = false;
   bool _biometricAvailable = false;
   Future<List<AssignedPackageSummary>>? _recentRegionalAssignmentsFuture;
+  Future<PendingAssignmentsSummary>? _pendingAssignmentsFuture;
   Future<AvailableCouriersResult>? _couriersFuture;
+  bool _initialPendingAlertHandled = false;
 
   bool get _showsModeSelection => widget.area == UserArea.modeSelection;
 
   bool get _showsManagementTools =>
       widget.area == UserArea.gestion || widget.area == UserArea.administrador;
+
+  bool get _showsManagementAlerts => _permissions.hasManagementRole;
 
   bool get _canSearchPackages =>
       !_showsModeSelection && _permissions.canSearchPackages;
@@ -201,6 +209,74 @@ class _HomePageState extends State<HomePage> {
         widget.services.packageTrackingRepository.preloadManagementInventory(),
       );
     }
+    if (_showsManagementAlerts) {
+      _pendingAssignmentsFuture = widget.services.packageTrackingRepository
+          .findPendingRegionalAssignments();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialPendingAlertHandled ||
+        !widget.showPendingAlertOnOpen ||
+        !_showsManagementAlerts) {
+      return;
+    }
+
+    _initialPendingAlertHandled = true;
+    final summaryFuture = _pendingAssignmentsFuture;
+    if (summaryFuture != null) {
+      unawaited(_showInitialPendingAlert(summaryFuture));
+    }
+  }
+
+  Future<void> _showInitialPendingAlert(
+    Future<PendingAssignmentsSummary> summaryFuture,
+  ) async {
+    PendingAssignmentsSummary summary;
+    try {
+      summary = await summaryFuture;
+    } catch (_) {
+      return;
+    }
+
+    if (!mounted || summary.pendingTotal <= 0) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+
+    final department = summary.departmentName.trim().isEmpty
+        ? 'tu departamento'
+        : summary.departmentName;
+    final pendingMessage = summary.pendingTotal == 1
+        ? 'Tienes 1 paquete pendiente de entrega asignado'
+        : 'Tienes ${summary.pendingTotal} paquetes pendientes de entrega asignados';
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(
+          Icons.notification_important_rounded,
+          color: AppTheme.errorRed,
+        ),
+        title: const Text('Alerta de paquetes pendientes'),
+        content: Text('$pendingMessage en $department.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cerrar'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              unawaited(_openPendingAssignments(summary));
+            },
+            icon: const Icon(Icons.list_alt_rounded),
+            label: const Text('Ver pendientes'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -307,6 +383,35 @@ class _HomePageState extends State<HomePage> {
     );
     _recentRegionalAssignmentsFuture = widget.services.packageTrackingRepository
         .findRecentRegionalAssignments();
+  }
+
+  Future<void> _openPendingAssignments(
+    PendingAssignmentsSummary summary,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RecentRegionalAssignmentsPage(
+          repository: widget.services.packageTrackingRepository,
+          initialAssignmentsFuture: Future.value(summary.assignments),
+          pendingAssignmentsMode: true,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    setState(() {
+      _pendingAssignmentsFuture = widget.services.packageTrackingRepository
+          .findPendingRegionalAssignments();
+    });
+  }
+
+  Widget _buildPendingAssignmentsAlerts() {
+    final summaryFuture = _pendingAssignmentsFuture;
+    if (summaryFuture == null) return const SizedBox.shrink();
+    return PendingAssignmentsAlertPanel(
+      repository: widget.services.packageTrackingRepository,
+      initialSummaryFuture: summaryFuture,
+      onOpenAssignments: _openPendingAssignments,
+    );
   }
 
   Future<void> _openSelfPackageAssignment() async {
@@ -476,6 +581,7 @@ class _HomePageState extends State<HomePage> {
           currentUser: widget.currentUser,
           services: widget.services,
           area: area,
+          showPendingAlertOnOpen: false,
         ),
       ),
     );
@@ -587,6 +693,10 @@ class _HomePageState extends State<HomePage> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 32),
+                    if (_showsManagementAlerts) ...[
+                      _buildPendingAssignmentsAlerts(),
+                      const SizedBox(height: 20),
+                    ],
                     _AreaOptionCard(
                       title: 'Gestión',
                       subtitle: 'Administración de tareas y paquetes.',
@@ -640,6 +750,9 @@ class _HomePageState extends State<HomePage> {
       bodyPadding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       body: PackageTrackingPanel(
         repository: widget.services.packageTrackingRepository,
+        topWidget: _showsManagementAlerts
+            ? _buildPendingAssignmentsAlerts()
+            : null,
         showPackageSearch: _canSearchPackages,
         onOpenCourierLookup: _canSearchCourierByCi
             ? _openCourierManagementLookup

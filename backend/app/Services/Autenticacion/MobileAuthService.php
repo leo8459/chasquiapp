@@ -35,7 +35,7 @@ class MobileAuthService
 
     private const AUXILIAR_ROLE_PATTERN = '/auxiliar/i';
 
-    private const MANAGEMENT_ROLE_PATTERN = '/encargado/i';
+    private const MANAGEMENT_ROLE_PATTERN = '/encargado|gestor|administrador_operaciones/i';
 
     public function __construct(
         private readonly MobileApiTokenService $tokenService,

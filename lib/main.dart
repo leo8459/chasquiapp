@@ -15,7 +15,7 @@ Future<void> main() async {
     unawaited(
       Future<void>.delayed(
         const Duration(seconds: 2),
-        CourierNotificationService.showManualTestNotificationOnce,
+        CourierNotificationService.showManualPendingAlertsNotifications,
       ),
     );
   }

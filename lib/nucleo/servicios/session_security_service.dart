@@ -20,6 +20,10 @@ class SessionSecurityService {
       'background_notification_access_token';
   static const _backgroundNotificationUserIdKey =
       'background_notification_user_id';
+  static const _backgroundNotificationIncludeCourierKey =
+      'background_notification_include_courier';
+  static const _backgroundNotificationIncludeManagementKey =
+      'background_notification_include_management';
   static const _backgroundLocationTokenKey = 'background_location_access_token';
   static const _backgroundLocationUserIdKey = 'background_location_user_id';
   static const _packageTrackingAssignmentsCachePrefix =
@@ -71,6 +75,8 @@ class SessionSecurityService {
       _storage.delete(key: _authenticatedUserPayloadKey),
       _storage.delete(key: _backgroundNotificationTokenKey),
       _storage.delete(key: _backgroundNotificationUserIdKey),
+      _storage.delete(key: _backgroundNotificationIncludeCourierKey),
+      _storage.delete(key: _backgroundNotificationIncludeManagementKey),
       _storage.delete(key: _backgroundLocationTokenKey),
       _storage.delete(key: _backgroundLocationUserIdKey),
       clearCachedOperationalData(),
@@ -209,6 +215,8 @@ class SessionSecurityService {
   Future<void> saveBackgroundNotificationSession({
     required String token,
     required int userId,
+    bool includeCourier = true,
+    bool includeManagement = false,
   }) async {
     final normalized = token.trim();
     if (normalized.isEmpty || userId <= 0) return;
@@ -217,6 +225,14 @@ class SessionSecurityService {
       _storage.write(
         key: _backgroundNotificationUserIdKey,
         value: userId.toString(),
+      ),
+      _storage.write(
+        key: _backgroundNotificationIncludeCourierKey,
+        value: includeCourier ? 'true' : 'false',
+      ),
+      _storage.write(
+        key: _backgroundNotificationIncludeManagementKey,
+        value: includeManagement ? 'true' : 'false',
       ),
     ]);
   }
@@ -231,10 +247,26 @@ class SessionSecurityService {
     );
   }
 
+  Future<bool> readBackgroundNotificationIncludesCourier() async {
+    final value = await _storage.read(
+      key: _backgroundNotificationIncludeCourierKey,
+    );
+    return value == null || value == 'true';
+  }
+
+  Future<bool> readBackgroundNotificationIncludesManagement() async {
+    final value = await _storage.read(
+      key: _backgroundNotificationIncludeManagementKey,
+    );
+    return value == 'true';
+  }
+
   Future<void> clearBackgroundNotificationSession() async {
     await Future.wait([
       _storage.delete(key: _backgroundNotificationTokenKey),
       _storage.delete(key: _backgroundNotificationUserIdKey),
+      _storage.delete(key: _backgroundNotificationIncludeCourierKey),
+      _storage.delete(key: _backgroundNotificationIncludeManagementKey),
     ]);
   }
 

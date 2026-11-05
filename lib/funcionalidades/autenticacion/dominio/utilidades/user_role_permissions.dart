@@ -17,7 +17,9 @@ class UserRolePermissions {
 
   static final RegExp _courierRolePattern = RegExp(r'cartero');
   static final RegExp _auxiliarRolePattern = RegExp(r'auxiliar');
-  static final RegExp _encargadoRolePattern = RegExp(r'encargado');
+  static final RegExp _managementRolePattern = RegExp(
+    r'encargado|gestor|administrador_operaciones',
+  );
   static const String _tratamientoRole = 'tratamiento';
   static const String _auxiliarTratamientoRole = 'auxiliar_tratamiento';
   static const String _encargadoEmsRole = 'encargado_ems';
@@ -37,7 +39,7 @@ class UserRolePermissions {
   bool get hasCourierRole => roles.any(_matchesCourierRole);
 
   bool get hasEncargadoRole =>
-      roles.any((role) => _encargadoRolePattern.hasMatch(role));
+      roles.any((role) => _managementRolePattern.hasMatch(role));
 
   bool get hasEmsManagementRole =>
       roles.contains(_encargadoEmsRole) ||
@@ -92,7 +94,7 @@ class UserRolePermissions {
         _matchesCourierRole(role) ||
         role == _consultationRole ||
         role == _administratorRole ||
-        _encargadoRolePattern.hasMatch(role) ||
+        _managementRolePattern.hasMatch(role) ||
         _matchesSelfAssignableManagementMarker(role);
   }
 

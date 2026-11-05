@@ -89,6 +89,17 @@ class MobileCourierController extends Controller
         ]);
     }
 
+    public function regionalPendingAssignments(
+        Request $request,
+        MobilePackageTrackingService $packageTrackingService,
+    ): JsonResponse {
+        return MobileApiResponse::success(
+            $packageTrackingService->findPendingRegionalAssignments(
+                $this->mobileAuthUser($request),
+            ),
+        );
+    }
+
     public function assignInventoryPackage(
         MobileInventoryAssignmentStoreRequest $request,
         int $userId,

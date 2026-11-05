@@ -111,9 +111,26 @@ class AppServices {
   final CourierLocationHeartbeatService courierLocationHeartbeatService;
 
   Future<void> activateCourierNotifications(AuthenticatedUser user) async {
+    await activatePendingPackageNotifications(
+      user,
+      includeCourier: true,
+      includeManagement: false,
+    );
+  }
+
+  Future<void> activatePendingPackageNotifications(
+    AuthenticatedUser user, {
+    required bool includeCourier,
+    required bool includeManagement,
+  }) async {
     final token = apiClient.currentAccessToken?.trim() ?? '';
     if (token.isEmpty) return;
-    await courierNotificationService.enable(token: token, userId: user.id);
+    await courierNotificationService.enable(
+      token: token,
+      userId: user.id,
+      includeCourier: includeCourier,
+      includeManagement: includeManagement,
+    );
   }
 
   Future<void> activateCourierLocationTracking(AuthenticatedUser user) {

@@ -5,7 +5,9 @@ import 'package:scan_agbc/nucleo/utilidades/user_friendly_error_mapper.dart';
 import 'package:scan_agbc/nucleo/componentes/app_cards.dart';
 import 'package:scan_agbc/nucleo/componentes/app_feedback_banner.dart';
 import 'package:scan_agbc/nucleo/componentes/app_page_scaffold.dart';
+import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/available_couriers_result.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/assigned_package_summary.dart';
+import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/courier_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/package_tracking_result.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/repositorios/package_tracking_repository.dart';
 import 'package:scan_agbc/funcionalidades/seguimiento/presentacion/paginas/package_tracking_search_page.dart';
@@ -15,10 +17,12 @@ class RecentRegionalAssignmentsPage extends StatefulWidget {
     super.key,
     required this.repository,
     this.initialAssignmentsFuture,
+    this.pendingAssignmentsMode = false,
   });
 
   final PackageTrackingRepository repository;
   final Future<List<AssignedPackageSummary>>? initialAssignmentsFuture;
+  final bool pendingAssignmentsMode;
 
   @override
   State<RecentRegionalAssignmentsPage> createState() =>
@@ -29,18 +33,299 @@ class _RecentRegionalAssignmentsPageState
     extends State<RecentRegionalAssignmentsPage> {
   late Future<List<AssignedPackageSummary>> _future =
       widget.initialAssignmentsFuture ?? _loadAssignments();
+  late Future<AvailableCouriersResult> _couriersFuture;
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  CourierSummary? _selectedCourier;
+  Future<List<AssignedPackageSummary>>? _selectedCourierAssignmentsFuture;
+  String _searchQuery = '';
   int? _revertingAssignmentId;
 
+  @override
+  void initState() {
+    super.initState();
+    _couriersFuture = widget.repository.findAvailableCouriers();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<List<AssignedPackageSummary>> _loadAssignments() {
-    return widget.repository.findRecentRegionalAssignments();
+    return widget.pendingAssignmentsMode
+        ? widget.repository.findPendingRegionalAssignments().then(
+            (summary) => summary.assignments,
+          )
+        : widget.repository.findRecentRegionalAssignments();
   }
 
   Future<void> _reload() async {
     final nextFuture = _loadAssignments();
+    final selectedCourier = _selectedCourier;
     setState(() {
       _future = nextFuture;
+      if (selectedCourier != null) {
+        _selectedCourierAssignmentsFuture = _loadCourierAssignments(
+          selectedCourier,
+        );
+      }
     });
     await nextFuture;
+  }
+
+  Future<List<AssignedPackageSummary>> _loadCourierAssignments(
+    CourierSummary courier,
+  ) async {
+    final assignments = await widget.repository.findAssignmentsForUser(
+      courier.id,
+      forceRefresh: true,
+    );
+    return assignments
+        .map(
+          (assignment) => assignment.copyWith(
+            courierUserId: courier.id,
+            courierName: courier.displayName,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  void _selectCourier(CourierSummary? courier) {
+    setState(() {
+      _selectedCourier = courier;
+      _selectedCourierAssignmentsFuture = courier == null
+          ? null
+          : _loadCourierAssignments(courier);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.minScrollExtent);
+      }
+    });
+  }
+
+  void _setSearchQuery(String value) {
+    setState(() {
+      _searchQuery = value.trim().toUpperCase();
+    });
+  }
+
+  Widget _buildFilters() {
+    return AppSoftCard(
+      padding: const EdgeInsets.all(14),
+      backgroundColor: AppTheme.yellowField,
+      borderRadius: AppTheme.radiusLarge,
+      borderColor: AppTheme.softBorder,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _searchController,
+            textCapitalization: TextCapitalization.characters,
+            decoration: InputDecoration(
+              labelText: 'Buscar por código de paquete',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _searchQuery.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Limpiar búsqueda',
+                      onPressed: () {
+                        _searchController.clear();
+                        _setSearchQuery('');
+                      },
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+            ),
+            onChanged: _setSearchQuery,
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder<AvailableCouriersResult>(
+            future: _couriersFuture,
+            builder: (context, snapshot) {
+              final couriersById = <int, CourierSummary>{};
+              for (final courier
+                  in snapshot.data?.couriers ?? const <CourierSummary>[]) {
+                if (courier.id > 0) {
+                  couriersById.putIfAbsent(courier.id, () => courier);
+                }
+              }
+              final selectedCourier = _selectedCourier;
+              if (selectedCourier != null && selectedCourier.id > 0) {
+                couriersById.putIfAbsent(
+                  selectedCourier.id,
+                  () => selectedCourier,
+                );
+              }
+              final couriers = couriersById.values.toList(growable: false);
+              final selectedCourierId = selectedCourier?.id ?? 0;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  DropdownButtonFormField<int>(
+                    key: ValueKey<int>(selectedCourierId),
+                    initialValue: selectedCourierId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Filtrar por cartero',
+                      prefixIcon: Icon(Icons.person_search_rounded),
+                    ),
+                    items: [
+                      const DropdownMenuItem<int>(
+                        value: 0,
+                        child: Text('Todos los carteros'),
+                      ),
+                      ...couriers.map(
+                        (courier) => DropdownMenuItem<int>(
+                          value: courier.id,
+                          child: Text(
+                            courier.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: snapshot.hasData
+                        ? (userId) {
+                            final selected = userId == null || userId == 0
+                                ? null
+                                : couriers.firstWhere(
+                                    (courier) => courier.id == userId,
+                                  );
+                            _selectCourier(selected);
+                          }
+                        : null,
+                  ),
+                  if (snapshot.connectionState != ConnectionState.done) ...[
+                    const SizedBox(height: 10),
+                    const LinearProgressIndicator(),
+                  ] else if (snapshot.hasError) ...[
+                    const SizedBox(height: 8),
+                    const Text('No se pudo cargar la lista de carteros.'),
+                  ],
+                  if (_selectedCourier != null) ...[
+                    const SizedBox(height: 10),
+                    _buildSelectedCourierPendingCount(),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedCourierPendingCount() {
+    final future = _selectedCourierAssignmentsFuture;
+    if (future == null) return const SizedBox.shrink();
+
+    return FutureBuilder<List<AssignedPackageSummary>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppTheme.blue,
+                ),
+              ),
+              SizedBox(width: 8),
+              Text('Consultando pendientes de entrega...'),
+            ],
+          );
+        }
+        if (snapshot.hasError) {
+          return const Text('No se pudo consultar el total de pendientes.');
+        }
+        final count = snapshot.data?.length ?? 0;
+        final pendingLabel = count == 1
+            ? '1 paquete pendiente'
+            : '$count paquetes pendientes';
+        return Text(
+          '${_selectedCourier!.displayName}: $pendingLabel de entrega.',
+          style: const TextStyle(
+            color: AppTheme.blueDark,
+            fontWeight: FontWeight.w900,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAssignmentsList(
+    List<AssignedPackageSummary> assignments, {
+    bool selectedCourierLoading = false,
+    Object? selectedCourierError,
+  }) {
+    final filteredAssignments = assignments
+        .where((assignment) {
+          if (_searchQuery.isEmpty) return true;
+          return assignment.code.toUpperCase().contains(_searchQuery);
+        })
+        .toList(growable: false);
+    final hasNoMatches = filteredAssignments.isEmpty;
+
+    return ListView.separated(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+      itemCount: hasNoMatches ? 3 : filteredAssignments.length + 2,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return _RecentAssignmentsHeader(
+            pendingMode:
+                widget.pendingAssignmentsMode || _selectedCourier != null,
+            selectedCourierName: _selectedCourier?.displayName,
+          );
+        }
+        if (index == 1) return _buildFilters();
+        if (hasNoMatches) {
+          final title = selectedCourierLoading
+              ? 'Cargando paquetes pendientes'
+              : selectedCourierError != null
+              ? 'No se pudieron cargar los pendientes'
+              : 'No hay paquetes para mostrar';
+          final message = selectedCourierLoading
+              ? 'Consultando las asignaciones del cartero seleccionado.'
+              : selectedCourierError != null
+              ? UserFriendlyErrorMapper.message(
+                  selectedCourierError,
+                  fallback: 'Intenta nuevamente en unos segundos.',
+                )
+              : _searchQuery.isNotEmpty
+              ? 'No encontramos paquetes con el código "$_searchQuery".'
+              : _selectedCourier != null
+              ? 'Este cartero no tiene paquetes pendientes de entrega.'
+              : widget.pendingAssignmentsMode
+              ? 'No hay paquetes asignados pendientes en tu departamento.'
+              : 'No hay paquetes asignados recientes para tu región.';
+          return AppStatusMessageCard(
+            title: title,
+            message: message,
+            icon: selectedCourierLoading
+                ? Icons.hourglass_top_rounded
+                : Icons.inventory_2_outlined,
+          );
+        }
+
+        final assignment = filteredAssignments[index - 2];
+        return _RegionalAssignmentCard(
+          assignment: assignment,
+          reverting: _revertingAssignmentId == assignment.assignmentId,
+          allowRevert: !widget.pendingAssignmentsMode,
+          onOpenDetails: () => _openPackageDetails(assignment),
+          onRevert: () => _revertAssignment(assignment),
+        );
+      },
+    );
   }
 
   Future<void> _openPackageDetails(AssignedPackageSummary assignment) async {
@@ -121,7 +406,11 @@ class _RecentRegionalAssignmentsPageState
   @override
   Widget build(BuildContext context) {
     return AppPageScaffold(
-      title: 'Asignaciones recientes',
+      title: _selectedCourier != null
+          ? 'Pendientes por cartero'
+          : widget.pendingAssignmentsMode
+          ? 'Paquetes pendientes asignados'
+          : 'Asignaciones recientes',
       body: RefreshIndicator(
         onRefresh: _reload,
         child: FutureBuilder<List<AssignedPackageSummary>>(
@@ -138,7 +427,9 @@ class _RecentRegionalAssignmentsPageState
                 padding: AppTheme.pagePadding,
                 children: [
                   AppStatusMessageCard(
-                    title: 'No se pudo cargar el historial',
+                    title: widget.pendingAssignmentsMode
+                        ? 'No se pudieron cargar los pendientes'
+                        : 'No se pudo cargar el historial',
                     message: UserFriendlyErrorMapper.message(
                       snapshot.error,
                       fallback: 'Intenta nuevamente en unos segundos.',
@@ -152,37 +443,19 @@ class _RecentRegionalAssignmentsPageState
 
             final assignments =
                 snapshot.data ?? const <AssignedPackageSummary>[];
-            if (assignments.isEmpty) {
-              return ListView(
-                padding: AppTheme.pagePadding,
-                children: const [
-                  AppStatusMessageCard(
-                    title: 'Sin asignaciones recientes',
-                    message:
-                        'No hay paquetes asignados hoy en estado CARTERO para tu región.',
-                    icon: Icons.history_rounded,
-                  ),
-                ],
-              );
+            final selectedCourier = _selectedCourier;
+            if (selectedCourier == null) {
+              return _buildAssignmentsList(assignments);
             }
 
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-              itemCount: assignments.length + 1,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return const _RecentAssignmentsHeader();
-                }
-
-                final assignment = assignments[index - 1];
-                return _RegionalAssignmentCard(
-                  assignment: assignment,
-                  reverting: _revertingAssignmentId == assignment.assignmentId,
-                  onOpenDetails: () => _openPackageDetails(assignment),
-                  onRevert: () => _revertAssignment(assignment),
-                );
-              },
+            return FutureBuilder<List<AssignedPackageSummary>>(
+              future: _selectedCourierAssignmentsFuture,
+              builder: (context, courierSnapshot) => _buildAssignmentsList(
+                courierSnapshot.data ?? const <AssignedPackageSummary>[],
+                selectedCourierLoading:
+                    courierSnapshot.connectionState != ConnectionState.done,
+                selectedCourierError: courierSnapshot.error,
+              ),
             );
           },
         ),
@@ -192,7 +465,13 @@ class _RecentRegionalAssignmentsPageState
 }
 
 class _RecentAssignmentsHeader extends StatelessWidget {
-  const _RecentAssignmentsHeader();
+  const _RecentAssignmentsHeader({
+    this.pendingMode = false,
+    this.selectedCourierName,
+  });
+
+  final bool pendingMode;
+  final String? selectedCourierName;
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +480,7 @@ class _RecentAssignmentsHeader extends StatelessWidget {
       backgroundColor: AppTheme.blue,
       borderRadius: AppTheme.radiusLarge,
       borderColor: AppTheme.strongBorder,
-      child: const Row(
+      child: Row(
         children: [
           _HeaderIcon(),
           SizedBox(width: 12),
@@ -210,7 +489,11 @@ class _RecentAssignmentsHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Historial regional',
+                  selectedCourierName != null
+                      ? 'Pendientes de $selectedCourierName'
+                      : pendingMode
+                      ? 'Pendientes del departamento'
+                      : 'Historial regional',
                   style: TextStyle(
                     color: AppTheme.yellowLight,
                     fontWeight: FontWeight.w900,
@@ -219,7 +502,11 @@ class _RecentAssignmentsHeader extends StatelessWidget {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Solo paquetes asignados hoy en estado CARTERO.',
+                  selectedCourierName != null
+                      ? 'Paquetes pendientes de entrega asignados a este cartero.'
+                      : pendingMode
+                      ? 'Paquetes asignados que siguen pendientes de entrega.'
+                      : 'Solo paquetes asignados hoy en estado CARTERO.',
                   style: TextStyle(
                     color: AppTheme.yellowLight,
                     fontWeight: FontWeight.w700,
@@ -262,12 +549,14 @@ class _RegionalAssignmentCard extends StatelessWidget {
   const _RegionalAssignmentCard({
     required this.assignment,
     required this.reverting,
+    required this.allowRevert,
     required this.onOpenDetails,
     required this.onRevert,
   });
 
   final AssignedPackageSummary assignment;
   final bool reverting;
+  final bool allowRevert;
   final VoidCallback onOpenDetails;
   final VoidCallback onRevert;
 
@@ -282,23 +571,21 @@ class _RegionalAssignmentCard extends StatelessWidget {
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 430;
           final info = _AssignmentInfoBlock(assignment: assignment);
-          final actions = [
-            _HistoryActionButton(
-              icon: Icons.visibility_rounded,
-              label: 'Ver detalle',
-              backgroundColor: AppTheme.blue,
-              foregroundColor: AppTheme.yellowLight,
-              onPressed: onOpenDetails,
-            ),
-            _HistoryActionButton(
-              icon: reverting ? null : Icons.undo_rounded,
-              label: 'ALMACEN',
-              backgroundColor: AppTheme.actionYellowStrong,
-              foregroundColor: AppTheme.blueDark,
-              busy: reverting,
-              onPressed: reverting ? null : onRevert,
-            ),
-          ];
+          final detailAction = _HistoryActionButton(
+            icon: Icons.visibility_rounded,
+            label: 'Ver detalle',
+            backgroundColor: AppTheme.blue,
+            foregroundColor: AppTheme.yellowLight,
+            onPressed: onOpenDetails,
+          );
+          final revertAction = _HistoryActionButton(
+            icon: reverting ? null : Icons.undo_rounded,
+            label: 'ALMACEN',
+            backgroundColor: AppTheme.actionYellowStrong,
+            foregroundColor: AppTheme.blueDark,
+            busy: reverting,
+            onPressed: reverting ? null : onRevert,
+          );
 
           if (compact) {
             return Column(
@@ -321,11 +608,13 @@ class _RegionalAssignmentCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Row(
-                  children: [
-                    Expanded(child: actions.first),
-                    const SizedBox(width: 10),
-                    Expanded(child: actions.last),
-                  ],
+                  children: allowRevert
+                      ? [
+                          Expanded(child: detailAction),
+                          const SizedBox(width: 10),
+                          Expanded(child: revertAction),
+                        ]
+                      : [Expanded(child: detailAction)],
                 ),
               ],
             );
@@ -347,15 +636,17 @@ class _RegionalAssignmentCard extends StatelessWidget {
               const SizedBox(width: 12),
               SizedBox(
                 width: 118,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    actions.first,
-                    const SizedBox(height: 8),
-                    actions.last,
-                  ],
-                ),
+                child: allowRevert
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          detailAction,
+                          const SizedBox(height: 8),
+                          revertAction,
+                        ],
+                      )
+                    : detailAction,
               ),
             ],
           );

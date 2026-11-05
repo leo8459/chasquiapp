@@ -56,6 +56,8 @@ Route::prefix('mobile')->as('mobile.')->group(function (): void {
         Route::get('/couriers/lookup', [MobileCourierController::class, 'lookup'])->name('couriers.lookup');
         Route::get('/couriers/assignments/recent', [MobileCourierController::class, 'regionalRecentAssignments'])
             ->name('couriers.assignments.regional-recent');
+        Route::get('/couriers/assignments/pending', [MobileCourierController::class, 'regionalPendingAssignments'])
+            ->name('couriers.assignments.pending');
         Route::get('/couriers/{userId}/assignments', [MobileCarteroController::class, 'assignments'])
             ->whereNumber('userId')
             ->name('couriers.assignments');

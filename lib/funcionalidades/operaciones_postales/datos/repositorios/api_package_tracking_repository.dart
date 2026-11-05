@@ -9,6 +9,7 @@ import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/c
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/courier_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/inventory_package_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/package_tracking_result.dart';
+import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/pending_assignments_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/tracking_events_result.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/repositorios/package_tracking_repository.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/utilidades/package_code_classifier.dart';
@@ -658,6 +659,31 @@ class ApiPackageTrackingRepository extends PackageTrackingRepository {
           .map((item) => _mapAssignment(item))
           .whereType<AssignedPackageSummary>()
           .toList(growable: false);
+    } on ApiException catch (error) {
+      throw StateError(error.message);
+    }
+  }
+
+  @override
+  Future<PendingAssignmentsSummary> findPendingRegionalAssignments() async {
+    try {
+      final payload = await _client.getJsonMap(
+        '/mobile/couriers/assignments/pending',
+        authorize: true,
+      );
+      final rawAssignments = payload['assignments'];
+      final assignments = rawAssignments is List
+          ? rawAssignments
+                .map((item) => _mapAssignment(item))
+                .whereType<AssignedPackageSummary>()
+                .toList(growable: false)
+          : const <AssignedPackageSummary>[];
+
+      return PendingAssignmentsSummary(
+        departmentName: payload['department']?.toString().trim() ?? '',
+        pendingTotal: _toInt(payload['department_pending_total']),
+        assignments: assignments,
+      );
     } on ApiException catch (error) {
       throw StateError(error.message);
     }

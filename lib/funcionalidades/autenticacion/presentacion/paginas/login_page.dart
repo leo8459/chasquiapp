@@ -264,8 +264,15 @@ class _LoginPageState extends State<LoginPage> {
     if (_navigatingToHome) return;
     _navigatingToHome = true;
     final permissions = UserRolePermissions.fromRoles(user.roles);
+    if (permissions.hasCourierRole || permissions.hasManagementRole) {
+      await widget.services.activatePendingPackageNotifications(
+        user,
+        includeCourier:
+            permissions.hasCourierRole && !permissions.hasManagementRole,
+        includeManagement: permissions.hasManagementRole,
+      );
+    }
     if (permissions.hasCourierRole) {
-      await widget.services.activateCourierNotifications(user);
       await widget.services.activateCourierLocationTracking(user);
     }
     if (!mounted) return;

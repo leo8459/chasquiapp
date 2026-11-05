@@ -5,6 +5,7 @@ import '../modelos/assigned_package_summary.dart';
 import '../modelos/courier_inventory_packages_result.dart';
 import '../modelos/contract_package_pickup_result.dart';
 import '../modelos/package_tracking_result.dart';
+import '../modelos/pending_assignments_summary.dart';
 import '../modelos/tracking_events_result.dart';
 
 abstract class PackageTrackingRepository {
@@ -38,6 +39,8 @@ abstract class PackageTrackingRepository {
   });
 
   Future<List<AssignedPackageSummary>> findRecentRegionalAssignments();
+
+  Future<PendingAssignmentsSummary> findPendingRegionalAssignments();
 
   Future<AvailableCouriersResult> findAvailableCouriers({
     bool forceRefresh = false,

@@ -176,7 +176,7 @@ class MobilePackageTrackingService
         $todayStart = now('America/La_Paz')->startOfDay();
         $tomorrowStart = $todayStart->copy()->addDay();
 
-        $rows = DB::select(self::regionalRecentAssignedSql(), [
+        $rows = DB::select($this->regionalRecentAssignedSql(), [
             $city,
             $city,
             $city,
@@ -208,6 +208,59 @@ class MobilePackageTrackingService
                 'courier_name' => trim((string) ($row->courier_name ?? '')),
             ];
         }, $rows)));
+    }
+
+    public function findPendingRegionalAssignments(array $authUser): array
+    {
+        $this->ensureCanManageOtherCouriers($authUser);
+        $city = $this->resolveManagementCity($authUser);
+        $rows = DB::select($this->regionalRecentAssignedSql(false), [
+            $city,
+            $city,
+            $city,
+            $city,
+        ]);
+
+        $assignments = array_values(array_filter(array_map(function (object $row): ?array {
+            $assignmentId = (int) ($row->assignment_id ?? 0);
+            $code = trim((string) ($row->code ?? ''));
+            $packageType = trim((string) ($row->package_type ?? ''));
+            $stateName = trim((string) ($row->state_name ?? ''));
+            $createdAt = $row->created_at ?? null;
+
+            if ($assignmentId <= 0 || $code === '' || $packageType === '' || $stateName === '') {
+                return null;
+            }
+
+            return [
+                'assignment_id' => $assignmentId,
+                'code' => strtoupper($code),
+                'package_type' => $packageType,
+                'state_name' => $stateName,
+                'created_at' => $createdAt instanceof \DateTimeInterface
+                    ? $createdAt->format('c')
+                    : ($createdAt !== null ? (string) $createdAt : null),
+                'courier_user_id' => (int) ($row->courier_user_id ?? 0),
+                'courier_name' => trim((string) ($row->courier_name ?? '')),
+            ];
+        }, $rows)));
+
+        $pickupAssignments = array_values(array_filter(
+            $assignments,
+            static fn (array $assignment): bool => strtoupper(trim((string) ($assignment['state_name'] ?? ''))) === 'SOLICITUD',
+        ));
+        $deliveryAssignments = array_values(array_filter(
+            $assignments,
+            static fn (array $assignment): bool => strtoupper(trim((string) ($assignment['state_name'] ?? ''))) !== 'SOLICITUD',
+        ));
+
+        return [
+            'department' => $city,
+            'department_pending_total' => count($deliveryAssignments),
+            'assignments' => $deliveryAssignments,
+            'department_pending_pickup_total' => count($pickupAssignments),
+            'pickup_assignments' => $pickupAssignments,
+        ];
     }
 
     public function assignInventoryPackageToCourier(
@@ -2037,9 +2090,17 @@ ORDER BY created_at DESC NULLS LAST, assignment_id DESC, code ASC
 SQL;
     }
 
-    private static function regionalRecentAssignedSql(): string
+    private function regionalRecentAssignedSql(bool $recentOnly = true): string
     {
-        return <<<'SQL'
+        $recentFilter = $recentOnly ? ' AND activity_at >= ? AND activity_at < ?' : '';
+        $limitClause = $recentOnly ? 'LIMIT 500' : '';
+        $activeStates = $recentOnly
+            ? "'ASIGNADO', 'CARTERO', 'DOMICILIO'"
+            : "'ASIGNADO', 'CARTERO', 'DOMICILIO', 'SOLICITUD'";
+        $rankColumn = $recentOnly ? '' : ",\n    ROW_NUMBER() OVER (\n      PARTITION BY upper(btrim(coalesce(code, ''))), package_type\n      ORDER BY activity_at DESC NULLS LAST, assignment_id DESC\n    ) AS row_number";
+        $rankFilter = $recentOnly ? '1 = 1' : 'row_number = 1';
+
+        return <<<SQL
 WITH assignments AS (
   SELECT
     c.id AS assignment_id,
@@ -2106,6 +2167,12 @@ WITH assignments AS (
   JOIN users u ON u.id = c.id_user
   JOIN paquetes_ordi po ON po.id = c.id_paquetes_ordi
   WHERE upper(btrim(coalesce(u.ciudad, ''))) = ?
+), ranked AS (
+  SELECT
+    assignments.*{$rankColumn}
+  FROM assignments
+  WHERE nullif(btrim(coalesce(code, '')), '') IS NOT NULL
+    AND upper(btrim(coalesce(state_name, ''))) IN ({$activeStates})
 )
 SELECT
   assignment_id,
@@ -2116,17 +2183,10 @@ SELECT
   activity_at,
   courier_user_id,
   courier_name
-FROM assignments
-WHERE nullif(btrim(coalesce(code, '')), '') IS NOT NULL
-  AND upper(btrim(coalesce(state_name, ''))) IN (
-    'ASIGNADO',
-    'CARTERO',
-    'DOMICILIO'
-  )
-  AND activity_at >= ?
-  AND activity_at < ?
+FROM ranked
+WHERE {$rankFilter}{$recentFilter}
 ORDER BY activity_at DESC NULLS LAST, assignment_id DESC, code ASC
-LIMIT 500
+{$limitClause}
 SQL;
     }
 }

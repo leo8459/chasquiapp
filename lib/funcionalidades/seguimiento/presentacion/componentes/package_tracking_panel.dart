@@ -20,6 +20,7 @@ class PackageTrackingPanel extends StatefulWidget {
     this.courierLookupActionSubtitle =
         'Busca por nombre y revisa sus asignaciones activas.',
     this.onOpenRecentAssignments,
+    this.topWidget,
     this.onOpenSelfAssignment,
     this.onOpenContractPickup,
     this.onOpenScanner,
@@ -36,6 +37,7 @@ class PackageTrackingPanel extends StatefulWidget {
   final String courierLookupActionTitle;
   final String courierLookupActionSubtitle;
   final VoidCallback? onOpenRecentAssignments;
+  final Widget? topWidget;
   final VoidCallback? onOpenSelfAssignment;
   final VoidCallback? onOpenContractPickup;
   final VoidCallback? onOpenScanner;
@@ -156,6 +158,10 @@ class _PackageTrackingPanelState extends State<PackageTrackingPanel> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (widget.topWidget != null) ...[
+                widget.topWidget!,
+                const SizedBox(height: 16),
+              ],
               _SearchCard(
                 searchCard: widget.showPackageSearch
                     ? PackageTrackingSearchCard(
