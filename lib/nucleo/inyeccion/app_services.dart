@@ -11,6 +11,8 @@ import 'package:scan_agbc/funcionalidades/autenticacion/dominio/modelos/authenti
 import 'package:scan_agbc/funcionalidades/autenticacion/dominio/repositorios/auth_repository.dart';
 import 'package:scan_agbc/funcionalidades/bitacoras/datos/repositorios/api_bitacora_repository.dart';
 import 'package:scan_agbc/funcionalidades/bitacoras/dominio/repositorios/bitacora_repository.dart';
+import 'package:scan_agbc/funcionalidades/factura_transporte/datos/repositorios/api_transport_invoice_repository.dart';
+import 'package:scan_agbc/funcionalidades/factura_transporte/dominio/repositorios/transport_invoice_repository.dart';
 import 'package:scan_agbc/funcionalidades/gasolina/datos/repositorios/api_gasolina_repository.dart';
 import 'package:scan_agbc/funcionalidades/gasolina/dominio/repositorios/gasolina_repository.dart';
 import 'package:scan_agbc/funcionalidades/mantenimiento/datos/repositorios/api_mantenimiento_repository.dart';
@@ -29,6 +31,7 @@ class AppServices {
     AuthRepository? authRepository,
     PackageTrackingRepository? packageTrackingRepository,
     BitacoraRepository? bitacoraRepository,
+    TransportInvoiceRepository? transportInvoiceRepository,
     GasolinaRepository? gasolinaRepository,
     MantenimientoRepository? mantenimientoRepository,
     ScanRepository? scannerRepository,
@@ -69,6 +72,9 @@ class AppServices {
       packageTrackingRepository: resolvedPackageTrackingRepository,
       bitacoraRepository:
           bitacoraRepository ?? ApiBitacoraRepository(resolvedApiClient),
+      transportInvoiceRepository:
+          transportInvoiceRepository ??
+          ApiTransportInvoiceRepository(resolvedApiClient),
       gasolinaRepository:
           gasolinaRepository ?? ApiGasolinaRepository(resolvedApiClient),
       mantenimientoRepository:
@@ -88,6 +94,7 @@ class AppServices {
     required this.authRepository,
     required this.packageTrackingRepository,
     required this.bitacoraRepository,
+    required this.transportInvoiceRepository,
     required this.gasolinaRepository,
     required this.mantenimientoRepository,
     required this.scannerRepository,
@@ -102,6 +109,7 @@ class AppServices {
   final AuthRepository authRepository;
   final PackageTrackingRepository packageTrackingRepository;
   final BitacoraRepository bitacoraRepository;
+  final TransportInvoiceRepository transportInvoiceRepository;
   final GasolinaRepository gasolinaRepository;
   final MantenimientoRepository mantenimientoRepository;
   final ScanRepository scannerRepository;

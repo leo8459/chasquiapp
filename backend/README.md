@@ -50,6 +50,35 @@ configuran exclusivamente en `.env`; también puedes ajustar allí los timeouts
 y la verificación SSL. Revisa el bloque `SIOP_*` de `.env.example`: el código
 no contiene una URL alternativa.
 
+### Facturas de transporte en BoliPost
+
+La app envía el formulario autenticado a `POST /api/mobile/facturas-transporte`.
+El backend reenvía la foto y los datos a la API de BoliPost
+`POST /api/integraciones/facturas-transporte`. BoliPost guarda el registro en
+la misma tabla que alimenta `https://trackingbo.correos.gob.bo/bitacoras`, por
+lo que aparece en esa vista junto con las facturas registradas desde la web.
+
+En BoliPost, crea un token de API externo con el permiso
+`FACTURAS DE TRANSPORTE - CHASQUIAPP` y configura en el `.env` de este backend:
+
+```env
+SIOP_FACTURA_TRANSPORTE_URL=https://trackingbo.correos.gob.bo/api/integraciones/facturas-transporte
+SIOP_FACTURA_TRANSPORTE_TOKEN=TOKEN_DE_API_DE_BOLIPOST
+SIOP_FACTURA_TRANSPORTE_TIMEOUT=45
+SIOP_FACTURA_TRANSPORTE_VERIFY_SSL=true
+```
+
+Después de actualizar el `.env`, limpia o vuelve a generar la caché de
+configuración y reinicia PHP-FPM. El token se conserva solo en el backend; no
+se incluye en la app Android.
+
+El endpoint de BoliPost recibe `multipart/form-data` con el `user_id` que el
+backend obtiene de la sesión autenticada, además de `cod_especial`,
+`tipo_transporte` (`aereo` o `terrestre`), `transportadora` cuando sea terrestre,
+`provincia`, `factura`, `precio_total`, `peso` e `imagen_factura`. Rechaza
+códigos que no correspondan a un envío o que ya tengan una factura de
+transporte registrada.
+
 Para probar sin Docker y sin Redis:
 
 ```env

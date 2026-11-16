@@ -34,7 +34,7 @@ El teléfono muestra el nombre `ChasquiApp`, definido por el proyecto Android.
 
 La app consulta `GET /api/mobile/app-version` al iniciar y al volver al primer
 plano. Todas sus solicitudes incluyen `X-App-Version` con la versión real
-instalada y el número de compilación, por ejemplo `1.0.5+6`. El servidor exige
+instalada y el número de compilación, por ejemplo `1.0.6+7`. El servidor exige
 coincidencia exacta con `MOBILE_REQUIRED_VERSION`: versiones distintas (incluso
 superiores), otro build o ausencia del encabezado reciben HTTP 426 antes del
 login o del acceso a rutas protegidas. Esto incluye sesiones recordadas y huella.
@@ -48,14 +48,14 @@ usa: el control ahora autoriza una única versión completa.
 
 Para publicar cada actualización:
 
-1. Incrementa `version` en `pubspec.yaml` (versión y build; esta entrega es `1.0.5+6`).
+1. Incrementa `version` en `pubspec.yaml` (versión y build; esta entrega es `1.0.6+7`).
 2. Compila el APK de producción con la URL de API correcta y la misma clave de
    firma utilizada en los dispositivos. Publica primero el APK nuevo en
    `public/descargas/chasquiapp.apk` y comprueba su enlace de descarga.
 3. Despliega el backend con este control y configura en el `.env` del servidor:
 
    ```dotenv
-   MOBILE_REQUIRED_VERSION=1.0.5+6
+   MOBILE_REQUIRED_VERSION=1.0.6+7
    MOBILE_DOWNLOAD_URL=
    ```
 

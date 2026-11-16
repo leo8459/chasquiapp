@@ -11,9 +11,7 @@ import 'package:scan_agbc/nucleo/componentes/app_user_drawer.dart';
 import 'package:scan_agbc/funcionalidades/autenticacion/dominio/modelos/authenticated_user.dart';
 import 'package:scan_agbc/funcionalidades/autenticacion/dominio/utilidades/user_role_permissions.dart';
 import 'package:scan_agbc/funcionalidades/autenticacion/presentacion/paginas/login_page.dart';
-import 'package:scan_agbc/funcionalidades/bitacoras/presentacion/paginas/bitacoras_page.dart';
-import 'package:scan_agbc/funcionalidades/gasolina/presentacion/paginas/gasolinas_page.dart';
-import 'package:scan_agbc/funcionalidades/mantenimiento/presentacion/paginas/mantenimientos_page.dart';
+import 'package:scan_agbc/funcionalidades/factura_transporte/presentacion/paginas/transport_invoice_page.dart';
 import 'package:scan_agbc/funcionalidades/inicio/presentacion/componentes/app_sidebar.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/assigned_package_summary.dart';
 import 'package:scan_agbc/funcionalidades/operaciones_postales/dominio/modelos/available_couriers_result.dart';
@@ -436,58 +434,24 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _openBitacoras() async {
+  Future<void> _openTransportInvoice() async {
     Navigator.of(context).pop();
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) =>
-            BitacorasPage(repository: widget.services.bitacoraRepository),
-      ),
-    );
-  }
-
-  Future<void> _openGasolina() async {
-    Navigator.of(context).pop();
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => GasolinasPage(
-          repository: widget.services.gasolinaRepository,
-          bitacoraRepository: widget.services.bitacoraRepository,
+        builder: (_) => TransportInvoicePage(
+          repository: widget.services.transportInvoiceRepository,
         ),
       ),
     );
   }
 
-  Future<void> _openMantenimientos() async {
-    Navigator.of(context).pop();
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => MantenimientosPage(
-          repository: widget.services.mantenimientoRepository,
-        ),
-      ),
-    );
-  }
-
-  List<AppDrawerActionItem> _buildDrawerActions() {
-    return <AppDrawerActionItem>[
-      AppDrawerActionItem(
-        icon: Icons.menu_book_rounded,
-        title: 'Bitácoras',
-        onTap: _openBitacoras,
-      ),
-      AppDrawerActionItem(
-        icon: Icons.local_gas_station_rounded,
-        title: 'Gasolina',
-        onTap: _openGasolina,
-      ),
-      AppDrawerActionItem(
-        icon: Icons.build_circle_outlined,
-        title: 'Solicitar mantenimiento',
-        onTap: _openMantenimientos,
-      ),
-    ];
-  }
+  List<AppDrawerActionItem> _buildDrawerActions() => <AppDrawerActionItem>[
+    AppDrawerActionItem(
+      icon: Icons.receipt_long_rounded,
+      title: 'Factura de transporte',
+      onTap: _openTransportInvoice,
+    ),
+  ];
 
   Future<void> _openScanner() async {
     final scannerController = ScannerController(

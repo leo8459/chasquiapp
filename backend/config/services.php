@@ -65,6 +65,13 @@ return [
         'verify_ssl' => (bool) env('SIOP_MANTENIMIENTO_VERIFY_SSL', true),
     ],
 
+    'siop_facturas_transporte' => [
+        'url' => env('SIOP_FACTURA_TRANSPORTE_URL'),
+        'token' => env('SIOP_FACTURA_TRANSPORTE_TOKEN'),
+        'timeout' => (int) env('SIOP_FACTURA_TRANSPORTE_TIMEOUT', 45),
+        'verify_ssl' => (bool) env('SIOP_FACTURA_TRANSPORTE_VERIFY_SSL', true),
+    ],
+
     'siop_login' => [
         'url' => env('SIOP_LOGIN_URL'),
         'token' => env('SIOP_LOGIN_TOKEN'),
